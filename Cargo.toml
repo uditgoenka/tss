@@ -1,5 +1,5 @@
 [package]
-name = "tss"
+name = "tss-cli"
 version = "0.1.1"
 edition = "2021"
 license = "Apache-2.0"
@@ -11,6 +11,10 @@ keywords = ["cli", "ai", "tokens", "terminal", "agents"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
+
+[[bin]]
+name = "tss"
+path = "src/main.rs"
 
 [[test]]
 name = "cli_foundation"

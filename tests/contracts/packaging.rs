@@ -40,6 +40,18 @@ fn homebrew_template_builds_tagged_source_with_cargo() {
 }
 
 #[test]
+fn cargo_package_uses_registry_safe_name_but_installs_tss_binary() {
+    let manifest = file("Cargo.toml");
+    let readme = file("README.md");
+
+    assert!(manifest.contains("name = \"tss-cli\""));
+    assert!(manifest.contains("[[bin]]"));
+    assert!(manifest.contains("name = \"tss\""));
+    assert!(readme.contains("cargo install tss-cli"));
+    assert!(readme.contains("installed binary is still `tss`"));
+}
+
+#[test]
 fn readme_documents_distribution_and_trust_contract() {
     let readme = file("README.md");
 

@@ -286,6 +286,15 @@ By Command
 
 ### Cargo / Source
 
+From Cargo after crates.io publication:
+
+```bash
+cargo install tss-cli
+```
+
+The Cargo package is named `tss-cli` because the `tss` crate name is already
+used by an unrelated project. The installed binary is still `tss`.
+
 From source:
 
 ```bash
