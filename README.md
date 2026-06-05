@@ -295,11 +295,16 @@ cargo build --release
 cargo install --path .
 ```
 
-From npm:
+From npm using the GitHub release tag:
 
 ```bash
-npm install -g @uditgoenka/tss
+npm install -g github:uditgoenka/tss#v0.1.01
 ```
+
+After npm registry publication, the scoped package will also install with
+`npm install -g @uditgoenka/tss`. Registry publication is wired through
+`.github/workflows/npm-publish.yml` and requires the repository secret
+`NPM_TOKEN`.
 
 From Homebrew:
 
@@ -751,7 +756,7 @@ A: Yes. Set `TSS_NO_STORE=1`.
 
 ## Roadmap
 
-- Release automation for GitHub assets, npm, and Homebrew checksums.
+- Release automation for GitHub assets and Homebrew checksums.
 - `tss doctor --commands` and `tss doctor --format=json`.
 - `tss gain --graph`, `tss gain --history`, `tss gain --daily`, `tss discover`,
   and `tss session`.
