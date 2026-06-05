@@ -5,9 +5,9 @@ export const TssPlugin = async () => {
       if (!output || !output.args || typeof output.args.command !== "string") return
 
       const command = output.args.command.trim()
-      if (!command || command.startsWith("tss ")) return
+      if (!command || command.startsWith("tss ") || command.startsWith("env TSS_AGENT=")) return
 
-      output.args.command = `tss run -- bash -lc ${shellQuote(output.args.command)}`
+      output.args.command = `env TSS_AGENT=opencode tss run -- bash -lc ${shellQuote(output.args.command)}`
     },
   }
 }

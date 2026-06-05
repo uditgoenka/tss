@@ -6,8 +6,8 @@ function shellQuote(value) {
 
 function wrap(command) {
   const trimmed = String(command).trim();
-  if (!trimmed || trimmed.startsWith("tss ")) return command;
-  return `tss run -- bash -lc ${shellQuote(command)}`;
+  if (!trimmed || trimmed.startsWith("tss ") || trimmed.startsWith("env TSS_AGENT=")) return command;
+  return `env TSS_AGENT=openclaw tss run -- bash -lc ${shellQuote(command)}`;
 }
 
 export default definePluginEntry({

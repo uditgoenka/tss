@@ -18,7 +18,10 @@ const { tmpdir } = require("node:os");
 
 const skipName = "TSS_SKIP_DOWNLOAD";
 const repo = "https://github.com/uditgoenka/tss";
-const version = require("../package.json").version;
+const manifest = require("../package.json");
+const packageVersion = manifest.version;
+const releaseVersion = (manifest.tss && manifest.tss.releaseVersion) || packageVersion;
+const releaseTag = (manifest.tss && manifest.tss.releaseTag) || `v${releaseVersion}`;
 const checksums = require("./checksums.json");
 const platform = process.platform;
 const arch = process.arch;
@@ -43,8 +46,8 @@ if (existsSync(installPath)) {
   process.exit(0);
 }
 
-const archiveName = `tss-${version}-${platform}-${arch}`;
-const releaseUrl = `${repo}/releases/download/v${version}/${archiveName}`;
+const archiveName = `tss-${releaseVersion}-${platform}-${arch}`;
+const releaseUrl = `${repo}/releases/download/${releaseTag}/${archiveName}`;
 const expectedSha256 = expectedChecksum(archiveName, `${platform}-${arch}`);
 
 download(releaseUrl, installPath, expectedSha256)

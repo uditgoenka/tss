@@ -22,17 +22,20 @@ fn npm_package_exposes_tss_binary_without_reimplementing_the_cli() {
     assert!(postinstall.contains("trustedHosts"));
     assert!(postinstall.contains("COPYFILE_EXCL"));
     assert!(postinstall.contains("objects.githubusercontent.com"));
-    assert!(file("npm/checksums.json").contains("tss-0.1.0-darwin-arm64"));
+    assert!(file("npm/checksums.json").contains("tss-0.1.01-darwin-arm64"));
 }
 
 #[test]
-fn homebrew_template_points_to_github_release_binary() {
+fn homebrew_template_builds_tagged_source_with_cargo() {
     let formula = file("packaging/homebrew/tss.rb.template");
 
     assert!(formula.contains("class Tss < Formula"));
     assert!(formula.contains("Apache-2.0"));
     assert!(formula.contains("github.com/uditgoenka/tss"));
-    assert!(formula.contains("bin.install"));
+    assert!(formula.contains("archive/refs/tags"));
+    assert!(formula.contains("version \"{{version}}\""));
+    assert!(formula.contains("depends_on \"rust\" => :build"));
+    assert!(formula.contains("cargo"));
     assert!(formula.contains("system \"#{bin}/tss\", \"--version\""));
 }
 
@@ -51,8 +54,8 @@ fn readme_documents_distribution_and_trust_contract() {
         "Migration",
         "TSS vs RTK",
         "evals.md",
-        "100/100 local eval iterations passed",
-        "98.5% estimated token reduction",
+        "150/150 local eval iterations passed",
+        "139.7K estimated tokens",
         "Pi.dev",
         "paypal.me/uditgoenka",
         "<h2 align=\"center\">Contributor</h2>",

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::env;
 use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
@@ -66,6 +67,11 @@ pub struct AnalyticsEvent {
     pub command: Vec<String>,
     pub command_category: String,
     pub filter_name: String,
+    pub agent: String,
+    pub agent_label: String,
+    pub agent_role: String,
+    pub subagent: bool,
+    pub subagent_name: String,
     pub safety_decision: SafetyDecision,
     pub raw_bytes: u64,
     pub emitted_bytes: u64,
@@ -75,6 +81,7 @@ pub struct AnalyticsEvent {
     pub omitted_tokens_estimate: u64,
     pub provider_cache_caveat: bool,
     pub command_parity: CommandParityStatus,
+    pub duration_ms: u64,
     pub timestamp_ms: u128,
 }
 
@@ -97,11 +104,17 @@ impl AnalyticsEvent {
             .collect::<Vec<_>>();
         let omitted_bytes = raw_bytes.saturating_sub(emitted_bytes);
         let command_parity = classify_command_parity(command.iter().map(String::as_str));
+        let agent_context = AgentContext::default();
 
         Self {
             command,
             command_category: command_category.into(),
             filter_name: filter_name.into(),
+            agent: agent_context.agent,
+            agent_label: agent_context.agent_label,
+            agent_role: agent_context.agent_role,
+            subagent: agent_context.subagent,
+            subagent_name: agent_context.subagent_name,
             safety_decision,
             raw_bytes,
             emitted_bytes,
@@ -111,7 +124,80 @@ impl AnalyticsEvent {
             omitted_tokens_estimate: estimate_tokens(omitted_bytes),
             provider_cache_caveat: true,
             command_parity,
+            duration_ms: 0,
             timestamp_ms: now_ms(),
+        }
+    }
+
+    pub fn with_agent_context(mut self, context: AgentContext) -> Self {
+        self.agent = context.agent;
+        self.agent_label = context.agent_label;
+        self.agent_role = context.agent_role;
+        self.subagent = context.subagent;
+        self.subagent_name = context.subagent_name;
+        self
+    }
+
+    pub fn with_duration_ms(mut self, duration_ms: u64) -> Self {
+        self.duration_ms = duration_ms;
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentContext {
+    pub agent: String,
+    pub agent_label: String,
+    pub agent_role: String,
+    pub subagent: bool,
+    pub subagent_name: String,
+}
+
+impl Default for AgentContext {
+    fn default() -> Self {
+        Self {
+            agent: String::from("manual"),
+            agent_label: String::from("Manual / Unknown"),
+            agent_role: String::from("main"),
+            subagent: false,
+            subagent_name: String::new(),
+        }
+    }
+}
+
+impl AgentContext {
+    pub fn from_env() -> Self {
+        Self::from_values(
+            env::var("TSS_AGENT")
+                .ok()
+                .or_else(|| env::var("TSS_AGENT_NAME").ok())
+                .as_deref(),
+            env::var("TSS_AGENT_ROLE").ok().as_deref(),
+            env_enabled("TSS_SUBAGENT"),
+            env::var("TSS_SUBAGENT_NAME").ok().as_deref(),
+        )
+    }
+
+    pub fn from_values(
+        agent: Option<&str>,
+        role: Option<&str>,
+        subagent_flag: bool,
+        subagent_name: Option<&str>,
+    ) -> Self {
+        let (agent, agent_label) = normalize_agent(agent.unwrap_or("manual"));
+        let mut subagent = subagent_flag;
+        let agent_role =
+            normalize_role(role.unwrap_or(if subagent { "sub-agent" } else { "main" }));
+        if agent_role == "sub-agent" {
+            subagent = true;
+        }
+
+        Self {
+            agent,
+            agent_label,
+            agent_role,
+            subagent,
+            subagent_name: sanitize_freeform(subagent_name.unwrap_or(""), 48),
         }
     }
 }
@@ -162,6 +248,11 @@ impl AnalyticsLedger {
                 "\"command_preview\":\"{}\",",
                 "\"command_category\":\"{}\",",
                 "\"filter_name\":\"{}\",",
+                "\"agent\":\"{}\",",
+                "\"agent_label\":\"{}\",",
+                "\"agent_role\":\"{}\",",
+                "\"subagent\":{},",
+                "\"subagent_name\":\"{}\",",
                 "\"command_parity\":\"{}\",",
                 "\"safety_decision\":\"{}\",",
                 "\"passthrough_reason\":\"{}\",",
@@ -171,6 +262,7 @@ impl AnalyticsLedger {
                 "\"raw_tokens_estimate\":{},",
                 "\"emitted_tokens_estimate\":{},",
                 "\"omitted_tokens_estimate\":{},",
+                "\"duration_ms\":{},",
                 "\"provider_cache_caveat\":{}",
                 "}}"
             ),
@@ -178,6 +270,11 @@ impl AnalyticsLedger {
             escape_json(&command_preview),
             escape_json(&event.command_category),
             escape_json(&event.filter_name),
+            escape_json(&event.agent),
+            escape_json(&event.agent_label),
+            escape_json(&event.agent_role),
+            event.subagent,
+            escape_json(&event.subagent_name),
             event.command_parity.as_str(),
             event.safety_decision.label(),
             escape_json(passthrough_reason),
@@ -187,6 +284,7 @@ impl AnalyticsLedger {
             event.raw_tokens_estimate,
             event.emitted_tokens_estimate,
             event.omitted_tokens_estimate,
+            event.duration_ms,
             event.provider_cache_caveat
         )
     }
@@ -207,7 +305,14 @@ pub struct GainReport {
     pub planned_events: u64,
     pub blocked_events: u64,
     pub provider_cache_caveat: bool,
+    pub duration_ms: u64,
+    pub subagent_event_count: u64,
+    pub subagent_raw_tokens_estimate: u64,
+    pub subagent_emitted_tokens_estimate: u64,
+    pub subagent_omitted_tokens_estimate: u64,
     pub command_rows: Vec<GainCommand>,
+    pub agent_rows: Vec<GainAgent>,
+    pub subagent_rows: Vec<GainSubagent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -217,6 +322,33 @@ pub struct GainCommand {
     pub raw_tokens_estimate: u64,
     pub emitted_tokens_estimate: u64,
     pub omitted_tokens_estimate: u64,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GainAgent {
+    pub agent: String,
+    pub agent_label: String,
+    pub count: u64,
+    pub subagent_count: u64,
+    pub failure_count: u64,
+    pub raw_tokens_estimate: u64,
+    pub emitted_tokens_estimate: u64,
+    pub omitted_tokens_estimate: u64,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GainSubagent {
+    pub agent: String,
+    pub agent_label: String,
+    pub subagent_name: String,
+    pub count: u64,
+    pub failure_count: u64,
+    pub raw_tokens_estimate: u64,
+    pub emitted_tokens_estimate: u64,
+    pub omitted_tokens_estimate: u64,
+    pub duration_ms: u64,
 }
 
 impl GainReport {
@@ -241,19 +373,30 @@ impl GainReport {
             planned_events: 0,
             blocked_events: 0,
             provider_cache_caveat: true,
+            duration_ms: 0,
+            subagent_event_count: 0,
+            subagent_raw_tokens_estimate: 0,
+            subagent_emitted_tokens_estimate: 0,
+            subagent_omitted_tokens_estimate: 0,
             command_rows: Vec::new(),
+            agent_rows: Vec::new(),
+            subagent_rows: Vec::new(),
         };
         let mut command_rows = BTreeMap::<String, GainCommand>::new();
+        let mut agent_rows = BTreeMap::<String, GainAgent>::new();
+        let mut subagent_rows = BTreeMap::<String, GainSubagent>::new();
 
         for line in contents.lines().filter(|line| !line.trim().is_empty()) {
             report.event_count += 1;
             let raw = extract_u64(line, "raw_bytes").unwrap_or(0);
             let emitted = extract_u64(line, "emitted_bytes").unwrap_or(0);
             let omitted = extract_u64(line, "omitted_bytes").unwrap_or(0);
+            let duration_ms = extract_u64(line, "duration_ms").unwrap_or(0);
 
             report.raw_bytes += raw;
             report.emitted_bytes += emitted;
             report.omitted_bytes += omitted;
+            report.duration_ms += duration_ms;
             let raw_tokens = extract_u64(line, "raw_tokens_estimate").unwrap_or(0);
             let emitted_tokens = extract_u64(line, "emitted_tokens_estimate").unwrap_or(0);
             let omitted_tokens = extract_u64(line, "omitted_tokens_estimate").unwrap_or(0);
@@ -270,14 +413,74 @@ impl GainReport {
                 raw_tokens_estimate: 0,
                 emitted_tokens_estimate: 0,
                 omitted_tokens_estimate: 0,
+                duration_ms: 0,
             });
             row.count += 1;
             row.raw_tokens_estimate += raw_tokens;
             row.emitted_tokens_estimate += emitted_tokens;
             row.omitted_tokens_estimate += omitted_tokens;
+            row.duration_ms += duration_ms;
 
-            if line.contains("\"safety_decision\":\"passthrough\"") || emitted > raw {
+            let failure = line.contains("\"safety_decision\":\"passthrough\"") || emitted > raw;
+            if failure {
                 report.failure_count += 1;
+            }
+
+            let agent_context = agent_context_from_line(line);
+            let agent_row = agent_rows
+                .entry(agent_context.agent.clone())
+                .or_insert(GainAgent {
+                    agent: agent_context.agent.clone(),
+                    agent_label: agent_context.agent_label.clone(),
+                    count: 0,
+                    subagent_count: 0,
+                    failure_count: 0,
+                    raw_tokens_estimate: 0,
+                    emitted_tokens_estimate: 0,
+                    omitted_tokens_estimate: 0,
+                    duration_ms: 0,
+                });
+            agent_row.count += 1;
+            agent_row.raw_tokens_estimate += raw_tokens;
+            agent_row.emitted_tokens_estimate += emitted_tokens;
+            agent_row.omitted_tokens_estimate += omitted_tokens;
+            agent_row.duration_ms += duration_ms;
+            if failure {
+                agent_row.failure_count += 1;
+            }
+
+            if agent_context.subagent {
+                report.subagent_event_count += 1;
+                report.subagent_raw_tokens_estimate += raw_tokens;
+                report.subagent_emitted_tokens_estimate += emitted_tokens;
+                report.subagent_omitted_tokens_estimate += omitted_tokens;
+                agent_row.subagent_count += 1;
+
+                let subagent_name = if agent_context.subagent_name.is_empty() {
+                    String::from("sub-agent")
+                } else {
+                    agent_context.subagent_name.clone()
+                };
+                let subagent_key = format!("{}\0{}", agent_context.agent, subagent_name);
+                let subagent_row = subagent_rows.entry(subagent_key).or_insert(GainSubagent {
+                    agent: agent_context.agent,
+                    agent_label: agent_context.agent_label,
+                    subagent_name,
+                    count: 0,
+                    failure_count: 0,
+                    raw_tokens_estimate: 0,
+                    emitted_tokens_estimate: 0,
+                    omitted_tokens_estimate: 0,
+                    duration_ms: 0,
+                });
+                subagent_row.count += 1;
+                subagent_row.raw_tokens_estimate += raw_tokens;
+                subagent_row.emitted_tokens_estimate += emitted_tokens;
+                subagent_row.omitted_tokens_estimate += omitted_tokens;
+                subagent_row.duration_ms += duration_ms;
+                if failure {
+                    subagent_row.failure_count += 1;
+                }
             }
 
             match extract_string(line, "command_parity").as_deref() {
@@ -296,6 +499,23 @@ impl GainReport {
                 .cmp(&left.omitted_tokens_estimate)
                 .then_with(|| right.count.cmp(&left.count))
                 .then_with(|| left.command.cmp(&right.command))
+        });
+        report.agent_rows = agent_rows.into_values().collect::<Vec<_>>();
+        report.agent_rows.sort_by(|left, right| {
+            right
+                .omitted_tokens_estimate
+                .cmp(&left.omitted_tokens_estimate)
+                .then_with(|| right.count.cmp(&left.count))
+                .then_with(|| left.agent_label.cmp(&right.agent_label))
+        });
+        report.subagent_rows = subagent_rows.into_values().collect::<Vec<_>>();
+        report.subagent_rows.sort_by(|left, right| {
+            right
+                .omitted_tokens_estimate
+                .cmp(&left.omitted_tokens_estimate)
+                .then_with(|| right.count.cmp(&left.count))
+                .then_with(|| left.agent_label.cmp(&right.agent_label))
+                .then_with(|| left.subagent_name.cmp(&right.subagent_name))
         });
 
         Ok(report)
@@ -338,6 +558,14 @@ impl GainReport {
         .unwrap();
         writeln!(
             output,
+            "{:<24} {:>12} (avg {})",
+            "Total exec time:",
+            format_duration(self.duration_ms),
+            avg_duration(self.duration_ms, self.event_count)
+        )
+        .unwrap();
+        writeln!(
+            output,
             "{:<24} {} {:>5.1}%",
             "Efficiency meter:",
             meter(savings_pct),
@@ -357,25 +585,111 @@ impl GainReport {
         writeln!(output, "{:<28} {:>12}", "planned", self.planned_events).unwrap();
         writeln!(output, "{:<28} {:>12}", "blocked", self.blocked_events).unwrap();
 
+        output.push_str("\nBy Agent\n");
+        output.push_str("------------------------------------------------------------\n");
+        if self.agent_rows.is_empty() {
+            output.push_str("No agent events recorded yet.\n");
+            output.push_str("Supported tags: claude codex opencode pi-dev kilo-code cursor\n");
+        } else {
+            output.push_str(
+                " #  Agent              Count    Sub     Saved    Avg%    Time  Impact\n",
+            );
+            output.push_str("------------------------------------------------------------\n");
+            for (index, row) in self.agent_rows.iter().take(10).enumerate() {
+                let avg = percent(row.omitted_tokens_estimate, row.raw_tokens_estimate);
+                writeln!(
+                    output,
+                    "{:>2}. {:<18} {:>5} {:>6} {:>9} {:>6.1}% {:>7}  {}",
+                    index + 1,
+                    truncate(&row.agent_label, 18),
+                    row.count,
+                    row.subagent_count,
+                    compact_number(row.omitted_tokens_estimate),
+                    avg,
+                    avg_duration(row.duration_ms, row.count),
+                    meter_small(avg)
+                )
+                .unwrap();
+            }
+        }
+
+        output.push_str("\nSub-Agent Usage\n");
+        output.push_str("------------------------------------------------------------\n");
+        writeln!(
+            output,
+            "{:<28} {:>12}",
+            "sub-agent commands", self.subagent_event_count
+        )
+        .unwrap();
+        writeln!(
+            output,
+            "{:<28} {:>12}",
+            "sub-agent input tokens",
+            compact_number(self.subagent_raw_tokens_estimate)
+        )
+        .unwrap();
+        writeln!(
+            output,
+            "{:<28} {:>12}",
+            "sub-agent output tokens",
+            compact_number(self.subagent_emitted_tokens_estimate)
+        )
+        .unwrap();
+        writeln!(
+            output,
+            "{:<28} {:>12} ({:>5.1}%)",
+            "sub-agent tokens saved",
+            compact_number(self.subagent_omitted_tokens_estimate),
+            percent(
+                self.subagent_omitted_tokens_estimate,
+                self.subagent_raw_tokens_estimate
+            )
+        )
+        .unwrap();
+        if !self.subagent_rows.is_empty() {
+            output.push_str("\nTop Sub-Agents\n");
+            output.push_str(
+                " #  Agent              Name             Count     Saved    Avg%  Impact\n",
+            );
+            output.push_str("------------------------------------------------------------\n");
+            for (index, row) in self.subagent_rows.iter().take(5).enumerate() {
+                let avg = percent(row.omitted_tokens_estimate, row.raw_tokens_estimate);
+                writeln!(
+                    output,
+                    "{:>2}. {:<18} {:<16} {:>5} {:>9} {:>6.1}%  {}",
+                    index + 1,
+                    truncate(&row.agent_label, 18),
+                    truncate(&row.subagent_name, 16),
+                    row.count,
+                    compact_number(row.omitted_tokens_estimate),
+                    avg,
+                    meter_small(avg)
+                )
+                .unwrap();
+            }
+        }
+
         output.push_str("\nBy Command\n");
         output.push_str("------------------------------------------------------------\n");
         if self.command_rows.is_empty() {
             output.push_str("No command events recorded yet.\n");
         } else {
-            output
-                .push_str(" #  Command                         Count     Saved    Avg%  Impact\n");
+            output.push_str(
+                " #  Command                         Count     Saved    Avg%    Time  Impact\n",
+            );
             output.push_str("------------------------------------------------------------\n");
             for (index, row) in self.command_rows.iter().take(10).enumerate() {
                 let avg = percent(row.omitted_tokens_estimate, row.raw_tokens_estimate);
                 writeln!(
                     output,
-                    "{:>2}. {:<30} {:>6} {:>9} {:>6.1}%  {}",
+                    "{:>2}. {:<30} {:>6} {:>9} {:>6.1}% {:>7}  {}",
                     index + 1,
                     truncate(&row.command, 30),
                     row.count,
                     compact_number(row.omitted_tokens_estimate),
                     avg,
-                    meter(avg)
+                    avg_duration(row.duration_ms, row.count),
+                    meter_small(avg)
                 )
                 .unwrap();
             }
@@ -411,6 +725,68 @@ impl GainReport {
             })
             .collect::<Vec<_>>()
             .join(",");
+        let agent_rows = self
+            .agent_rows
+            .iter()
+            .map(|row| {
+                format!(
+                    concat!(
+                        "{{",
+                        "\"agent\":\"{}\",",
+                        "\"agent_label\":\"{}\",",
+                        "\"count\":{},",
+                        "\"subagent_count\":{},",
+                        "\"failure_count\":{},",
+                        "\"raw_tokens_estimate\":{},",
+                        "\"emitted_tokens_estimate\":{},",
+                        "\"omitted_tokens_estimate\":{},",
+                        "\"duration_ms\":{}",
+                        "}}"
+                    ),
+                    escape_json(&row.agent),
+                    escape_json(&row.agent_label),
+                    row.count,
+                    row.subagent_count,
+                    row.failure_count,
+                    row.raw_tokens_estimate,
+                    row.emitted_tokens_estimate,
+                    row.omitted_tokens_estimate,
+                    row.duration_ms
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let subagent_rows = self
+            .subagent_rows
+            .iter()
+            .map(|row| {
+                format!(
+                    concat!(
+                        "{{",
+                        "\"agent\":\"{}\",",
+                        "\"agent_label\":\"{}\",",
+                        "\"subagent_name\":\"{}\",",
+                        "\"count\":{},",
+                        "\"failure_count\":{},",
+                        "\"raw_tokens_estimate\":{},",
+                        "\"emitted_tokens_estimate\":{},",
+                        "\"omitted_tokens_estimate\":{},",
+                        "\"duration_ms\":{}",
+                        "}}"
+                    ),
+                    escape_json(&row.agent),
+                    escape_json(&row.agent_label),
+                    escape_json(&row.subagent_name),
+                    row.count,
+                    row.failure_count,
+                    row.raw_tokens_estimate,
+                    row.emitted_tokens_estimate,
+                    row.omitted_tokens_estimate,
+                    row.duration_ms
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
 
         format!(
             concat!(
@@ -427,8 +803,15 @@ impl GainReport {
                 "\"passthrough_compatible_events\":{},",
                 "\"planned_events\":{},",
                 "\"blocked_events\":{},",
+                "\"duration_ms\":{},",
+                "\"subagent_event_count\":{},",
+                "\"subagent_raw_tokens_estimate\":{},",
+                "\"subagent_emitted_tokens_estimate\":{},",
+                "\"subagent_omitted_tokens_estimate\":{},",
                 "\"provider_cache_caveat\":{},",
-                "\"command_rows\":[{}]",
+                "\"command_rows\":[{}],",
+                "\"agent_rows\":[{}],",
+                "\"subagent_rows\":[{}]",
                 "}}"
             ),
             self.raw_bytes,
@@ -443,8 +826,15 @@ impl GainReport {
             self.passthrough_compatible_events,
             self.planned_events,
             self.blocked_events,
+            self.duration_ms,
+            self.subagent_event_count,
+            self.subagent_raw_tokens_estimate,
+            self.subagent_emitted_tokens_estimate,
+            self.subagent_omitted_tokens_estimate,
             self.provider_cache_caveat,
-            command_rows
+            command_rows,
+            agent_rows,
+            subagent_rows
         )
     }
 }
@@ -470,7 +860,36 @@ fn compact_number(value: u64) -> String {
 fn meter(percent: f64) -> String {
     let filled = ((percent.clamp(0.0, 100.0) / 5.0).round() as usize).min(20);
     let empty = 20 - filled;
-    format!("[{}{}]", "#".repeat(filled), "-".repeat(empty))
+    format!("[{}{}]", "█".repeat(filled), "░".repeat(empty))
+}
+
+fn meter_small(percent: f64) -> String {
+    let filled = ((percent.clamp(0.0, 100.0) / 10.0).round() as usize).min(10);
+    let empty = 10 - filled;
+    format!("{}{}", "█".repeat(filled), "░".repeat(empty))
+}
+
+fn avg_duration(total_ms: u64, count: u64) -> String {
+    if count == 0 {
+        return String::from("0ms");
+    }
+    format_duration(total_ms / count)
+}
+
+fn format_duration(ms: u64) -> String {
+    if ms < 1_000 {
+        format!("{ms}ms")
+    } else if ms < 60_000 {
+        format!("{:.1}s", ms as f64 / 1_000.0)
+    } else if ms < 3_600_000 {
+        let minutes = ms / 60_000;
+        let seconds = (ms % 60_000) / 1_000;
+        format!("{minutes}m{seconds:02}s")
+    } else {
+        let hours = ms / 3_600_000;
+        let minutes = (ms % 3_600_000) / 60_000;
+        format!("{hours}h{minutes:02}m")
+    }
 }
 
 fn truncate(value: &str, max_chars: usize) -> String {
@@ -504,12 +923,98 @@ fn extract_u64(line: &str, key: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
+fn extract_bool(line: &str, key: &str) -> Option<bool> {
+    let needle = format!("\"{}\":", key);
+    let start = line.find(&needle)? + needle.len();
+    let rest = &line[start..];
+    if rest.starts_with("true") {
+        Some(true)
+    } else if rest.starts_with("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
 fn extract_string(line: &str, key: &str) -> Option<String> {
     let needle = format!("\"{}\":\"", key);
     let start = line.find(&needle)? + needle.len();
     let rest = &line[start..];
     let end = rest.find('"')?;
     Some(rest[..end].to_string())
+}
+
+fn agent_context_from_line(line: &str) -> AgentContext {
+    AgentContext::from_values(
+        extract_string(line, "agent").as_deref(),
+        extract_string(line, "agent_role").as_deref(),
+        extract_bool(line, "subagent").unwrap_or(false),
+        extract_string(line, "subagent_name").as_deref(),
+    )
+}
+
+fn env_enabled(name: &str) -> bool {
+    env::var(name)
+        .map(|value| {
+            matches!(
+                value.to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn normalize_agent(value: &str) -> (String, String) {
+    let compact = value
+        .trim()
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .collect::<String>();
+
+    let pair = match compact.as_str() {
+        "" | "manual" | "unknown" => ("manual", "Manual / Unknown"),
+        "claude" | "claudecode" => ("claude-code", "Claude Code"),
+        "copilot" | "githubcopilot" | "githubcopilotvscode" => ("copilot", "GitHub Copilot"),
+        "copilotcli" | "githubcopilotcli" | "ghcopilot" => ("copilot-cli", "GitHub Copilot CLI"),
+        "gemini" | "geminicli" => ("gemini", "Gemini CLI"),
+        "opencode" => ("opencode", "OpenCode"),
+        "openclaw" => ("openclaw", "OpenClaw"),
+        "cursor" => ("cursor", "Cursor"),
+        "codex" | "openaicodex" => ("codex", "Codex"),
+        "windsurf" => ("windsurf", "Windsurf"),
+        "cline" => ("cline", "Cline"),
+        "roo" | "roocode" => ("roo-code", "Roo Code"),
+        "pi" | "pidev" => ("pi-dev", "Pi.dev"),
+        "hermes" => ("hermes", "Hermes"),
+        "mistral" | "mistralvibe" => ("mistral-vibe", "Mistral Vibe"),
+        "kilo" | "kilocode" => ("kilo-code", "Kilo Code"),
+        "antigravity" | "googleantigravity" => ("antigravity", "Google Antigravity"),
+        _ => ("custom", "Custom / Unknown"),
+    };
+
+    (String::from(pair.0), String::from(pair.1))
+}
+
+fn normalize_role(value: &str) -> String {
+    let normalized = value.trim().to_ascii_lowercase().replace('_', "-");
+    match normalized.as_str() {
+        "" => String::from("main"),
+        "subagent" | "sub-agent" | "child" | "worker" => String::from("sub-agent"),
+        "main" | "parent" => String::from("main"),
+        _ => sanitize_freeform(&normalized, 24),
+    }
+}
+
+fn sanitize_freeform(value: &str, max_chars: usize) -> String {
+    value
+        .trim()
+        .chars()
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.' | '/' | ' ')
+        })
+        .take(max_chars)
+        .collect::<String>()
 }
 
 fn escape_json(value: &str) -> String {

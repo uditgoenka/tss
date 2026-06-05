@@ -1,5 +1,5 @@
 {
   "name": "tss-copilot-cli",
   "mode": "suggestion",
-  "description": "Suggest wrapping command-bearing terminal calls with tss run -- when the host supports pre-tool guidance."
+  "description": "Suggest wrapping command-bearing terminal calls with TSS_AGENT=copilot-cli tss run --. For child or delegated shells, add TSS_SUBAGENT=1 so tss gain can report sub-agent savings."
 }

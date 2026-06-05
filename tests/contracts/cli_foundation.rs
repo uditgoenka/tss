@@ -105,6 +105,7 @@ fn help_advertises_phase_2_command_surface() {
         "tss doctor",
         "tss compat",
         "tss gain",
+        "tss shell-init",
         "tss init [agent|--agent <agent>]",
         "tss verify",
         "tss --version",
@@ -176,7 +177,7 @@ fn foundation_skeleton_commands_are_recognized() {
 }
 
 #[test]
-fn version_reports_package_version() {
+fn version_reports_release_version() {
     let state_dir = temp_state_dir("version");
     let output = tss_command(&state_dir)
         .arg("--version")
@@ -184,10 +185,7 @@ fn version_reports_package_version() {
         .expect("run version");
 
     assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
-        format!("tss {}\n", env!("CARGO_PKG_VERSION"))
-    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "tss 0.1.01\n");
 }
 
 #[test]
@@ -293,6 +291,9 @@ fn gain_renders_readable_terminal_dashboard() {
     assert!(stdout.contains("Total commands:"));
     assert!(stdout.contains("Tokens saved:"));
     assert!(stdout.contains("Efficiency meter:"));
+    assert!(stdout.contains("By Agent"));
+    assert!(stdout.contains("Manual / Unknown"));
+    assert!(stdout.contains("Sub-Agent Usage"));
     assert!(stdout.contains("By Command"));
     assert!(stdout.contains("cat [args redacted: 1]"));
     assert!(stdout.contains("printf [args redacted: 1]"));
@@ -304,6 +305,75 @@ fn gain_renders_readable_terminal_dashboard() {
         stdout.lines().all(|line| line.chars().count() <= 100),
         "gain output should avoid long wrapped lines:\n{stdout}"
     );
+}
+
+#[test]
+fn shell_wrapped_simple_command_filters_inner_command_and_tracks_subagent() {
+    let state_dir = temp_state_dir("shell-wrapper-gain");
+    let analytics_file = state_dir.join("analytics.jsonl");
+
+    let filtered = tss_command_with_analytics(&state_dir, &analytics_file)
+        .env("TSS_AGENT", "codex")
+        .env("TSS_AGENT_ROLE", "sub-agent")
+        .env("TSS_SUBAGENT", "1")
+        .env("TSS_SUBAGENT_NAME", "scenario-scanner")
+        .args([
+            "run",
+            "--",
+            "bash",
+            "-lc",
+            "cat tests/fixtures/files/cat_long_single_file.txt",
+        ])
+        .output()
+        .expect("run shell-wrapped filtered command");
+    assert!(filtered.status.success());
+    let stdout = String::from_utf8_lossy(&filtered.stdout);
+    assert!(stdout.contains("file output"));
+    assert!(stdout.contains("use tss raw tssr_"));
+    assert!(!stdout.contains("line 10: release verification"));
+
+    let gain = tss_command_with_analytics(&state_dir, &analytics_file)
+        .arg("gain")
+        .output()
+        .expect("run gain after shell-wrapped command");
+    assert!(gain.status.success());
+
+    let gain_stdout = String::from_utf8_lossy(&gain.stdout);
+    assert!(gain_stdout.contains("By Agent"));
+    assert!(gain_stdout.contains("Codex"));
+    assert!(gain_stdout.contains("Sub-Agent Usage"));
+    assert!(gain_stdout.contains("scenario-scanner"));
+    assert!(gain_stdout.contains("cat [args redacted: 1]"));
+    assert!(!gain_stdout.contains("bash [args redacted"));
+
+    let json = tss_command_with_analytics(&state_dir, &analytics_file)
+        .args(["gain", "--json"])
+        .output()
+        .expect("run gain json after shell-wrapped command");
+    assert!(json.status.success());
+    let json_stdout = String::from_utf8_lossy(&json.stdout);
+    assert!(json_stdout.contains("\"agent\":\"codex\""));
+    assert!(json_stdout.contains("\"subagent_event_count\":1"));
+    assert!(json_stdout.contains("\"subagent_name\":\"scenario-scanner\""));
+}
+
+#[test]
+fn shell_init_emits_agent_scoped_wrappers_for_subagent_shells() {
+    let state_dir = temp_state_dir("shell-init");
+    let output = tss_command(&state_dir)
+        .args(["shell-init", "--agent", "kilo-code", "--subagent"])
+        .output()
+        .expect("run shell-init");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("export TSS_BIN='"));
+    assert!(stdout.contains("export TSS_AGENT='kilo-code'"));
+    assert!(stdout.contains("export TSS_AGENT_ROLE='sub-agent'"));
+    assert!(stdout.contains("export TSS_SUBAGENT=1"));
+    assert!(stdout.contains("bash() { _tss_wrap bash \"$@\"; }"));
+    assert!(stdout.contains("git() { _tss_wrap git \"$@\"; }"));
+    assert!(stdout.contains("rg() { _tss_wrap rg \"$@\"; }"));
 }
 
 #[test]

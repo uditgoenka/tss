@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 
 use crate::analytics::{
-    AnalyticsEvent, AnalyticsLedger, GainReport, PassthroughReason,
+    AgentContext, AnalyticsEvent, AnalyticsLedger, GainReport, PassthroughReason,
     SafetyDecision as AnalyticsDecision,
 };
 use crate::core::raw_store::{RawOutput as StoredRawOutput, RawRenderMode, RawStore};
@@ -12,6 +12,8 @@ use crate::core::{CommandSpec, PassthroughRunner, RunnerError};
 use crate::filters::{filter_command, CommandInput};
 use crate::integrations::{all_integrations, Agent, AgentIntegration, Scope};
 use crate::privacy::PrivacyConfig;
+
+const DISPLAY_VERSION: &str = "0.1.01";
 
 const HELP: &str = "\
 tss - trust-first token saving CLI
@@ -25,6 +27,7 @@ Usage:
   tss doctor
   tss compat
   tss gain
+  tss shell-init [--agent <agent>] [--subagent]
   tss init [agent|--agent <agent>] [-g|--global] [--dry-run]
   tss verify
   tss --version
@@ -42,7 +45,7 @@ where
             0
         }
         Some("--version" | "-V" | "version") => {
-            println!("tss {}", env!("CARGO_PKG_VERSION"));
+            println!("tss {}", DISPLAY_VERSION);
             0
         }
         Some("help") => {
@@ -55,6 +58,7 @@ where
         Some("doctor") => doctor(),
         Some("compat") => compat(),
         Some("gain") => gain(args[1..].to_vec()),
+        Some("shell-init") => shell_init(args[1..].to_vec()),
         Some("init") => init(args[1..].to_vec()),
         Some("verify") => {
             println!("tss verify: ok");
@@ -94,11 +98,13 @@ fn execute_command(args: Vec<String>, filtering_enabled: bool) -> i32 {
                 output.exit_code,
             );
             let raw_id = store_raw_output(&spec, &raw);
+            let filter_spec = filter_spec_for_shell_wrapper(&spec).unwrap_or_else(|| spec.clone());
+            let duration_ms = duration_millis(output.duration);
 
             if filtering_enabled {
                 let raw_text = String::from_utf8_lossy(&output.combined);
                 let filtered = filter_command(
-                    CommandInput::new(spec.program.clone(), spec.args.clone()),
+                    CommandInput::new(filter_spec.program.clone(), filter_spec.args.clone()),
                     &raw_text,
                 );
 
@@ -106,17 +112,18 @@ fn execute_command(args: Vec<String>, filtering_enabled: bool) -> i32 {
                     let rendered = render_filtered_output(filtered.output, raw_id.as_deref());
                     let _ = io::stdout().write_all(rendered.as_bytes());
                     record_analytics(
-                        &spec,
+                        &filter_spec,
                         filtered.filter_name,
                         AnalyticsDecision::Filtered,
                         raw.byte_len() as u64,
                         rendered.len() as u64,
+                        duration_ms,
                     );
                     return output.exit_code;
                 }
 
                 record_analytics(
-                    &spec,
+                    &filter_spec,
                     filtered.filter_name,
                     AnalyticsDecision::Passthrough(PassthroughReason::Other(
                         filtered
@@ -126,16 +133,18 @@ fn execute_command(args: Vec<String>, filtering_enabled: bool) -> i32 {
                     )),
                     raw.byte_len() as u64,
                     raw.byte_len() as u64,
+                    duration_ms,
                 );
             } else {
                 record_analytics(
-                    &spec,
+                    &filter_spec,
                     "proxy",
                     AnalyticsDecision::Passthrough(PassthroughReason::Other(
                         "explicit proxy".to_string(),
                     )),
                     raw.byte_len() as u64,
                     raw.byte_len() as u64,
+                    duration_ms,
                 );
             }
 
@@ -409,6 +418,67 @@ fn gain(args: Vec<String>) -> i32 {
     }
 }
 
+fn shell_init(args: Vec<String>) -> i32 {
+    let mut agent = String::from("manual");
+    let mut subagent = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--agent" => {
+                index += 1;
+                let Some(value) = args.get(index) else {
+                    eprintln!("usage: tss shell-init [--agent <agent>] [--subagent]");
+                    return 2;
+                };
+                agent = value.clone();
+            }
+            value if value.starts_with("--agent=") => {
+                agent = value.trim_start_matches("--agent=").to_string();
+            }
+            "--subagent" | "--sub-agent" => {
+                subagent = true;
+            }
+            "--help" | "-h" => {
+                println!("usage: tss shell-init [--agent <agent>] [--subagent]");
+                return 0;
+            }
+            value => {
+                eprintln!("tss shell-init: unknown option `{value}`");
+                return 2;
+            }
+        }
+        index += 1;
+    }
+
+    let context = AgentContext::from_values(
+        Some(&agent),
+        Some(if subagent { "sub-agent" } else { "main" }),
+        subagent,
+        None,
+    );
+
+    println!("# TSS shell wrappers. Source only in agent-controlled shells.");
+    let tss_bin = env::current_exe()
+        .ok()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| String::from("tss"));
+    println!("export TSS_BIN={}", shell_quote(&tss_bin));
+    println!("export TSS_AGENT={}", shell_quote(&context.agent));
+    println!("export TSS_AGENT_ROLE={}", shell_quote(&context.agent_role));
+    if context.subagent {
+        println!("export TSS_SUBAGENT=1");
+    }
+    println!("_tss_wrap() {{");
+    println!("  if [ \"${{TSS_BYPASS:-0}}\" = \"1\" ]; then command \"$@\";");
+    println!("  else command \"$TSS_BIN\" run -- \"$@\"; fi");
+    println!("}}");
+    for command in SHELL_WRAPPED_COMMANDS {
+        println!("{command}() {{ _tss_wrap {command} \"$@\"; }}");
+    }
+    0
+}
+
 fn write_raw_streams(stdout: &[u8], stderr: &[u8]) {
     let _ = io::stdout().write_all(stdout);
     let _ = io::stderr().write_all(stderr);
@@ -437,6 +507,7 @@ fn record_analytics(
     decision: AnalyticsDecision,
     raw_bytes: u64,
     emitted_bytes: u64,
+    duration_ms: u64,
 ) {
     let mut command = Vec::with_capacity(1 + spec.args.len());
     command.push(spec.program.as_str());
@@ -449,9 +520,125 @@ fn record_analytics(
         decision,
         raw_bytes,
         emitted_bytes,
-    );
+    )
+    .with_agent_context(AgentContext::from_env())
+    .with_duration_ms(duration_ms);
     let _ = default_analytics_ledger().record(event);
 }
+
+fn duration_millis(duration: std::time::Duration) -> u64 {
+    duration.as_millis().try_into().unwrap_or(u64::MAX)
+}
+
+fn filter_spec_for_shell_wrapper(spec: &CommandSpec) -> Option<CommandSpec> {
+    let shell_name = spec.program.rsplit('/').next().unwrap_or(&spec.program);
+    if !matches!(shell_name, "bash" | "sh" | "zsh") {
+        return None;
+    }
+
+    let first_arg = spec.args.first()?;
+    if !matches!(first_arg.as_str(), "-c" | "-lc") {
+        return None;
+    }
+
+    let shell_command = spec.args.get(1)?;
+    let parts = split_simple_shell_words(shell_command)?;
+    CommandSpec::from_run_args(parts).ok()
+}
+
+fn split_simple_shell_words(input: &str) -> Option<Vec<String>> {
+    if input.chars().any(|character| {
+        matches!(
+            character,
+            '\n' | '\r'
+                | '|'
+                | '&'
+                | ';'
+                | '<'
+                | '>'
+                | '('
+                | ')'
+                | '`'
+                | '$'
+                | '\\'
+                | '*'
+                | '?'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '~'
+        )
+    }) {
+        return None;
+    }
+
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut quote = None;
+
+    for character in input.chars() {
+        match quote {
+            Some('\'') if character == '\'' => quote = None,
+            Some('"') if character == '"' => quote = None,
+            Some(_) => current.push(character),
+            None if character == '\'' || character == '"' => quote = Some(character),
+            None if character.is_whitespace() => {
+                if !current.is_empty() {
+                    words.push(std::mem::take(&mut current));
+                }
+            }
+            None => current.push(character),
+        }
+    }
+
+    if quote.is_some() {
+        return None;
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    if words.is_empty() || words.first().is_some_and(|word| word.contains('=')) {
+        return None;
+    }
+
+    Some(words)
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+const SHELL_WRAPPED_COMMANDS: &[&str] = &[
+    "bash",
+    "sh",
+    "zsh",
+    "git",
+    "rg",
+    "grep",
+    "egrep",
+    "fgrep",
+    "ls",
+    "find",
+    "cat",
+    "head",
+    "tail",
+    "cargo",
+    "go",
+    "pytest",
+    "vitest",
+    "tsc",
+    "next",
+    "npm",
+    "pnpm",
+    "yarn",
+    "bun",
+    "deno",
+    "node",
+    "jest",
+    "playwright",
+    "brew",
+];
 
 fn default_raw_store() -> RawStore {
     RawStore::new(

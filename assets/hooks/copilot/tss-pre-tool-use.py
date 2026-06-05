@@ -35,9 +35,9 @@ if command_key is None:
     emit({})
 
 command = tool_args[command_key]
-if command.strip().startswith("tss "):
+if command.strip().startswith("tss ") or command.strip().startswith("env TSS_AGENT="):
     emit({})
 
 modified = dict(tool_args)
-modified[command_key] = "tss run -- bash -lc " + shlex.quote(command)
+modified[command_key] = "env TSS_AGENT=copilot tss run -- bash -lc " + shlex.quote(command)
 emit({"modifiedArgs": modified})
