@@ -43,12 +43,16 @@ fn homebrew_template_builds_tagged_source_with_cargo() {
 fn cargo_package_uses_registry_safe_name_but_installs_tss_binary() {
     let manifest = file("Cargo.toml");
     let readme = file("README.md");
+    let workflow = file(".github/workflows/cargo-publish.yml");
 
     assert!(manifest.contains("name = \"tss-cli\""));
     assert!(manifest.contains("[[bin]]"));
     assert!(manifest.contains("name = \"tss\""));
     assert!(readme.contains("cargo install tss-cli"));
     assert!(readme.contains("installed binary is still `tss`"));
+    assert!(readme.contains("CARGO_REGISTRY_TOKEN"));
+    assert!(workflow.contains("cargo publish --dry-run"));
+    assert!(workflow.contains("cargo publish --token"));
 }
 
 #[test]

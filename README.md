@@ -294,6 +294,8 @@ cargo install tss-cli
 
 The Cargo package is named `tss-cli` because the `tss` crate name is already
 used by an unrelated project. The installed binary is still `tss`.
+Crates.io publication is wired through `.github/workflows/cargo-publish.yml`
+and requires the repository secret `CARGO_REGISTRY_TOKEN`.
 
 From source:
 
