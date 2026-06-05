@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.3, pytest-8.2.2
+collected 3 items / 1 error
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting tests/test_api_contract.py ___________________
+ImportError while importing test module '/repo/tests/test_api_contract.py'.
+Traceback:
+tests/test_api_contract.py:4: in <module>
+    from acme.api import make_client
+src/acme/api.py:12: in <module>
+    from acme.missing import MissingClient
+E   ModuleNotFoundError: No module named 'acme.missing'
+
+=================================== FAILURES ===================================
+________________________ test_invoice_total_is_returned ________________________
+tests/test_billing.py:21: in test_invoice_total_is_returned
+    assert response.json()["total"] == "42.00"
+E   AssertionError: assert '0.00' == '42.00'
+E     - 42.00
+E     + 0.00
+
+=========================== short test summary info ============================
+ERROR tests/test_api_contract.py
+FAILED tests/test_billing.py::test_invoice_total_is_returned - AssertionError
+===================== 1 failed, 1 passed, 1 error in 0.21s =====================

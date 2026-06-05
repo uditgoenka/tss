@@ -1,0 +1,10 @@
+line 01: trust contract
+line 02: raw output recovery
+line 03: safe command shape
+line 04: explicit omission marker
+line 05: exact mode fallback
+line 06: structured output guard
+line 07: diagnostic preservation
+line 08: fixture coverage
+line 09: agent integration
+line 10: release verification

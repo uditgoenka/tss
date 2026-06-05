@@ -1,0 +1,12 @@
+.:
+total 16
+drwxr-xr-x  4 user staff 128 Jun  5 21:18 .
+drwxr-xr-x 12 user staff 384 Jun  5 21:10 ..
+drwxr-xr-x  3 user staff  96 Jun  5 21:18 src
+-rw-r--r--  1 user staff  20 Jun  5 21:18 README.md
+
+./src:
+total 8
+drwxr-xr-x 3 user staff  96 Jun  5 21:18 .
+drwxr-xr-x 4 user staff 128 Jun  5 21:18 ..
+-rw-r--r-- 1 user staff  12 Jun  5 21:18 lib.rs

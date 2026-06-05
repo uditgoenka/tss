@@ -1,0 +1,3 @@
+{"type":"begin","data":{"path":{"text":"src/lib.rs"}}}
+{"type":"match","data":{"path":{"text":"src/lib.rs"},"lines":{"text":"trust_contract();\n"},"line_number":12,"absolute_offset":50,"submatches":[{"match":{"text":"trust"},"start":0,"end":5}]}}
+{"type":"end","data":{"path":{"text":"src/lib.rs"},"binary_offset":null,"stats":{"elapsed":{"secs":0,"nanos":1000,"human":"0.000001s"},"searches":1,"searches_with_match":1,"bytes_searched":20,"bytes_printed":10,"matched_lines":1,"matches":1}}}

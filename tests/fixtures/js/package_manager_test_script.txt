@@ -1,0 +1,12 @@
+Scope: @acme/web
+Command: vitest run --config vitest.workspace.ts --run
+
+> @acme/web@1.0.0 test
+> vitest run --config vitest.workspace.ts --run
+
+ FAIL  src/billing/billing.test.ts > Billing flows > renders balance for paid invoice
+AssertionError: expected '$0.00' to equal '$42.00'
+ at src/billing/billing.test.ts:18:11
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)

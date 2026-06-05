@@ -1,0 +1,8 @@
+# example.com/acme/internal/billing
+internal/billing/service.go:42:13: undefined: missingSymbol
+internal/billing/service.go:58:20: cannot use amount (variable of type string) as int value in argument to charge
+# example.com/acme/internal/api
+internal/api/handler.go:91:2: fmt.Println arg user.ID is a func value, not called
+FAIL    example.com/acme/internal/billing [build failed]
+coverage: 68.5% of statements in ./...
+FAIL

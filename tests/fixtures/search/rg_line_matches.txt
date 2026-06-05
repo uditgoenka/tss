@@ -1,0 +1,6 @@
+src/lib.rs:10:pub fn trust_contract() {}
+src/lib.rs:42:assert_trust();
+src/main.rs:7:println!("trust");
+tests/filter.rs:14:trust contract fixture
+tests/filter.rs:22:raw trust recovery
+tests/filter.rs:30:trust marker

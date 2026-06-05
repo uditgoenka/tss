@@ -1,0 +1,10 @@
+f000001 start release prep
+f000002 tighten filter policy
+f000003 Merge branch 'feature/raw-store'
+f000004 add raw store tests
+f000005 wire raw store
+f000006 simplify envelope footer
+f000007 add shell safety classifier
+f000008 document trust contract
+f000009 add CLI smoke test
+f000010 initial scaffold

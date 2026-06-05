@@ -1,0 +1,21 @@
+ DEV  v3.0.1 /repo
+
+ ❯ src/components/BrokenWidget.test.tsx (0 test)
+
+ FAIL  src/components/BrokenWidget.test.tsx [ src/components/BrokenWidget.test.tsx ]
+Error: Transform failed with 1 error:
+/repo/src/components/BrokenWidget.tsx:17:12: ERROR: Expected ";" but found "return"
+  Plugin: vite:esbuild
+  File: /repo/src/components/BrokenWidget.tsx:17:12
+
+Expected ";" but found "return"
+15 |   const title = props.title
+16 |   if (!title)
+17 |     return <span>Missing</span>
+   |            ^
+18 | }
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  21:03:14
+   Duration  512ms

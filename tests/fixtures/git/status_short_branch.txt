@@ -1,0 +1,5 @@
+## main...origin/main [ahead 1, behind 2]
+M  src/lib.rs
+ M src/main.rs
+A  src/filters/git.rs
+?? tests/fixtures/git/status_short_branch.txt
