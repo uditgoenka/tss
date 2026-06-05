@@ -172,8 +172,64 @@ fn claude_hook_plan_mutates_only_bash_and_never_auto_allows() {
         .path
         .ends_with(".claude/hooks/tss-pre-tool-use.py")
         && file.contents.contains("updatedInput")
+        && file.contents.contains("TSS_AGENT=claude-code")
         && !file.contents.contains("permissionDecision")
         && !file.contents.contains(&removed_auto_allow_env)));
+}
+
+#[test]
+fn integration_assets_tag_gain_agent_keys_and_subagent_guidance() {
+    let scope = Scope::project("repo");
+    let plans = all_integrations()
+        .into_iter()
+        .map(|integration| integration.install(&scope, true))
+        .collect::<Vec<_>>();
+
+    let expected = [
+        (Agent::Claude, "TSS_AGENT=claude-code"),
+        (Agent::Copilot, "TSS_AGENT=copilot"),
+        (Agent::CopilotCli, "TSS_AGENT=copilot-cli"),
+        (Agent::Gemini, "TSS_AGENT=gemini"),
+        (Agent::OpenCode, "TSS_AGENT=opencode"),
+        (Agent::OpenClaw, "TSS_AGENT=openclaw"),
+        (Agent::Cursor, "TSS_AGENT=cursor"),
+        (Agent::Codex, "TSS_AGENT=codex"),
+        (Agent::Windsurf, "TSS_AGENT=windsurf"),
+        (Agent::Cline, "TSS_AGENT=cline"),
+        (Agent::RooCode, "TSS_AGENT=roo-code"),
+        (Agent::PiDev, "TSS_AGENT=pi-dev"),
+        (Agent::Hermes, "TSS_AGENT=hermes"),
+        (Agent::MistralVibe, "TSS_AGENT=mistral-vibe"),
+        (Agent::KiloCode, "TSS_AGENT=kilo-code"),
+        (Agent::Antigravity, "TSS_AGENT=antigravity"),
+    ];
+
+    for (agent, marker) in expected {
+        let plan = plans.iter().find(|plan| plan.agent == agent).unwrap();
+        let contents = plan
+            .rendered_files
+            .iter()
+            .map(|file| file.contents.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        assert!(
+            contents.contains(marker),
+            "{agent:?} integration must include {marker}"
+        );
+        assert!(
+            contents.contains("TSS_SUBAGENT")
+                || matches!(
+                    agent,
+                    Agent::Copilot
+                        | Agent::OpenCode
+                        | Agent::OpenClaw
+                        | Agent::PiDev
+                        | Agent::Hermes
+                ),
+            "{agent:?} integration must include sub-agent guidance or automatic tagging"
+        );
+    }
 }
 
 #[test]

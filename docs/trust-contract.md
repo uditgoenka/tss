@@ -1,12 +1,12 @@
 ---
 title: "TSS Trust Contract"
-version: "0.1.0"
+version: "0.1.01"
 status: "draft"
 last_updated: 2026-06-05
 license: "Apache-2.0"
 ---
 
-# TSS Trust Contract v0.1.0
+# TSS Trust Contract v0.1.01
 
 TSS exists to reduce agent terminal tokens without making the agent less correct
 than it would have been with raw command output. Correctness, auditability, and
