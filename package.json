@@ -1,0 +1,37 @@
+{
+  "name": "@uditgoenka/tss",
+  "version": "0.1.0",
+  "description": "Trust-first token saving CLI for agent terminal output",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uditgoenka/tss.git"
+  },
+  "homepage": "https://github.com/uditgoenka/tss#readme",
+  "bugs": {
+    "url": "https://github.com/uditgoenka/tss/issues"
+  },
+  "bin": {
+    "tss": "npm/bin/tss"
+  },
+  "files": [
+    "npm/bin/tss",
+    "npm/postinstall.js",
+    "npm/checksums.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "postinstall": "node npm/postinstall.js"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "cli",
+    "terminal",
+    "tokens"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

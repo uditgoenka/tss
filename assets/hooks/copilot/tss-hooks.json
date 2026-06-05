@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "sh -c 'script=\"$PWD/.github/hooks/tss-pre-tool-use.py\"; if [ ! -f \"$script\" ]; then script=\"$HOME/.github/hooks/tss-pre-tool-use.py\"; fi; exec python3 \"$script\"'",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

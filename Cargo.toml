@@ -1,0 +1,45 @@
+[package]
+name = "tss"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/uditgoenka/tss"
+description = "Trust-first token saving CLI for agent terminal output"
+homepage = "https://github.com/uditgoenka/tss"
+readme = "README.md"
+keywords = ["cli", "ai", "tokens", "terminal", "agents"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+
+[[test]]
+name = "cli_foundation"
+path = "tests/contracts/cli_foundation.rs"
+
+[[test]]
+name = "filter_git_files_search"
+path = "tests/contracts/filter_git_files_search.rs"
+
+[[test]]
+name = "filter_test_runners"
+path = "tests/contracts/filter_test_runners.rs"
+
+[[test]]
+name = "integrations_contract"
+path = "tests/contracts/integrations_contract.rs"
+
+[[test]]
+name = "packaging"
+path = "tests/contracts/packaging.rs"
+
+[[test]]
+name = "privacy"
+path = "tests/contracts/privacy.rs"
+
+[[test]]
+name = "raw_store"
+path = "tests/contracts/raw_store.rs"
+
+[[test]]
+name = "safety_gate"
+path = "tests/contracts/safety_gate.rs"

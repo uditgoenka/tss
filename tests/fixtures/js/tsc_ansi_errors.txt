@@ -1,0 +1,15 @@
+[96msrc/index.ts[0m:[93m12[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+
+[7m12[0m const count: number = "four";
+[7m  [0m [91m      ~~~~~[0m
+
+[96msrc/routes/user.ts[0m:[93m31[0m:[93m14[0m - [91merror[0m[90m TS2339: [0mProperty 'emailAddress' does not exist on type 'User'.
+
+[7m31[0m   return user.emailAddress.toLowerCase();
+[7m  [0m [91m             ~~~~~~~~~~~~[0m
+
+Found 2 errors in 2 files.
+
+Errors  Files
+     1  src/index.ts:12
+     1  src/routes/user.ts:31

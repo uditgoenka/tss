@@ -1,0 +1,3 @@
+src/filters/git.rs
+tests/contracts/filter_git_files_search.rs
+tests/fixtures/git/diff_name_only.txt

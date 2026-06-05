@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+
+const { existsSync } = require("node:fs");
+const { join } = require("node:path");
+const { spawnSync } = require("node:child_process");
+
+const overrideName = "TSS_BINARY";
+const binaryName = process.platform === "win32" ? "tss.exe" : "tss";
+const localBinary = join(__dirname, "..", "bin-dist", process.platform, process.arch, binaryName);
+const binary = process.env[overrideName] || localBinary;
+
+if (!existsSync(binary)) {
+  console.error(
+    "tss: binary not found. Run `cargo install --path .`, set TSS_BINARY, or reinstall @uditgoenka/tss."
+  );
+  process.exit(127);
+}
+
+const result = spawnSync(binary, process.argv.slice(2), { stdio: "inherit" });
+
+if (result.error) {
+  console.error(`tss: failed to run ${binary}: ${result.error.message}`);
+  process.exit(127);
+}
+
+process.exit(result.status === null ? 1 : result.status);

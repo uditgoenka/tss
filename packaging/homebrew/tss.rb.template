@@ -1,0 +1,15 @@
+class Tss < Formula
+  desc "Trust-first token saving CLI for agent terminal output"
+  homepage "https://github.com/uditgoenka/tss"
+  url "https://github.com/uditgoenka/tss/releases/download/v{{version}}/tss-{{version}}-{{target}}"
+  sha256 "{{sha256}}"
+  license "Apache-2.0"
+
+  def install
+    bin.install "tss-{{version}}-{{target}}" => "tss"
+  end
+
+  test do
+    system "#{bin}/tss", "--version"
+  end
+end

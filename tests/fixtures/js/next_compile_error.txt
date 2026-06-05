@@ -1,0 +1,23 @@
+   ▲ Next.js 15.1.0
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.12:3000
+
+ ✓ Starting...
+ ✓ Ready in 1287ms
+ ○ Compiling /dashboard/settings ...
+ Failed to compile.
+
+./app/dashboard/settings/page.tsx:42:17
+Type error: Property 'usernmae' does not exist on type 'UserProfile'. Did you mean 'username'?
+
+  40 | export default function SettingsPage({ profile }: Props) {
+  41 |   return (
+> 42 |     <h1>{profile.usernmae}</h1>
+     |                 ^
+  43 |   );
+  44 | }
+  45 |
+
+Route (app)                              Size     First Load JS
+┌ ○ /dashboard/settings                  1.2 kB   98.1 kB
+└ ○ /login                               900 B    91.4 kB

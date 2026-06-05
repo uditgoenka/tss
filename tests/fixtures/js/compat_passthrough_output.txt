@@ -1,0 +1,8 @@
+toolchain output that must remain exact
+workspace: @acme/web
+script: test -- --runInBand
+warning: using cached package metadata
+FAIL example.spec.ts
+  expected 1 to equal 2
+stack frame: /repo/example.spec.ts:11:7
+summary: 1 failed, 3 passed

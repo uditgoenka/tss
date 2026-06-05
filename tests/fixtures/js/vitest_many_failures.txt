@@ -1,0 +1,46 @@
+ RUN  v3.0.1 /repo
+
+stdout | src/billing/billing.test.ts > setup
+using seeded clock 2026-06-05T12:00:00.000Z
+
+ FAIL  src/billing/billing.test.ts > Billing flows > renders balance for paid invoice
+AssertionError: expected '$0.00' to equal '$42.00'
+ at src/billing/billing.test.ts:18:11
+ at runWithExpensiveFixture src/test/helpers.ts:77:5
+
+stdout | src/billing/billing.test.ts > Billing flows > renders balance for paid invoice
+loaded 15 invoices
+created customer cus_123
+
+ FAIL  src/billing/billing.test.ts > Billing flows > blocks checkout when card is expired
+AssertionError: expected true to be false
+ at src/billing/billing.test.ts:39:9
+ at runWithExpensiveFixture src/test/helpers.ts:77:5
+
+stderr | src/billing/billing.test.ts > Billing flows > blocks checkout when card is expired
+retrying payment intent pi_123
+retrying payment intent pi_123
+
+ FAIL  src/billing/billing.test.ts > Billing flows > surfaces API validation errors
+Error: expected validation message to include "email is required"
+ at src/billing/billing.test.ts:61:13
+ at runWithExpensiveFixture src/test/helpers.ts:77:5
+
+stdout | src/billing/billing.test.ts > Billing flows > surfaces API validation errors
+request payload size 1282 bytes
+response payload size 341 bytes
+
+ FAIL  src/billing/billing.test.ts > Billing flows > keeps optimistic update after retry
+AssertionError: expected 'pending' to equal 'paid'
+ at src/billing/billing.test.ts:88:15
+ at runWithExpensiveFixture src/test/helpers.ts:77:5
+
+stdout | src/billing/billing.test.ts > teardown
+deleted customer cus_123
+deleted payment method pm_123
+cleared cache key billing:cus_123
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 12 passed (16)
+   Start at  21:16:44
+   Duration  2.84s (transform 120ms, setup 122ms, collect 90ms, tests 1.91s)

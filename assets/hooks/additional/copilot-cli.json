@@ -1,0 +1,5 @@
+{
+  "name": "tss-copilot-cli",
+  "mode": "suggestion",
+  "description": "Suggest wrapping command-bearing terminal calls with tss run -- when the host supports pre-tool guidance."
+}
