@@ -374,6 +374,14 @@ fn shell_init_emits_agent_scoped_wrappers_for_subagent_shells() {
     assert!(stdout.contains("bash() { _tss_wrap bash \"$@\"; }"));
     assert!(stdout.contains("git() { _tss_wrap git \"$@\"; }"));
     assert!(stdout.contains("rg() { _tss_wrap rg \"$@\"; }"));
+    for package_manager in ["npm", "pnpm", "yarn", "bun", "deno", "pip", "pip3", "brew"] {
+        assert!(
+            stdout.contains(&format!(
+                "{package_manager}() {{ _tss_wrap {package_manager} \"$@\"; }}"
+            )),
+            "shell-init should wrap {package_manager}"
+        );
+    }
 }
 
 #[test]
