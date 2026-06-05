@@ -295,11 +295,17 @@ cargo build --release
 cargo install --path .
 ```
 
-From npm using the GitHub release tag:
+From JavaScript package managers using the GitHub release tag:
 
 ```bash
 npm install -g github:uditgoenka/tss#v0.1.01
+pnpm add github:uditgoenka/tss#v0.1.01
+yarn add github:uditgoenka/tss#v0.1.01
+bun add --trust github:uditgoenka/tss#v0.1.01
 ```
+
+Bun requires `--trust` for GitHub dependencies that download a checked release
+binary during `postinstall`.
 
 After npm registry publication, the scoped package will also install with
 `npm install -g @uditgoenka/tss`. Registry publication is wired through
