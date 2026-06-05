@@ -1,12 +1,15 @@
 class Tss < Formula
   desc "Trust-first token saving CLI for agent terminal output"
   homepage "https://github.com/uditgoenka/tss"
-  url "https://github.com/uditgoenka/tss/releases/download/v{{version}}/tss-{{version}}-{{target}}"
+  url "https://github.com/uditgoenka/tss/archive/refs/tags/v{{version}}.tar.gz"
+  version "{{version}}"
   sha256 "{{sha256}}"
   license "Apache-2.0"
 
+  depends_on "rust" => :build
+
   def install
-    bin.install "tss-{{version}}-{{target}}" => "tss"
+    system "cargo", "install", *std_cargo_args(path: ".")
   end
 
   test do

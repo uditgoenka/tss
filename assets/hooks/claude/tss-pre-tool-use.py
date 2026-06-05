@@ -33,16 +33,16 @@ command = tool_input.get("command")
 if not isinstance(command, str) or not command.strip():
     emit(empty_context("TSS hook skipped: Bash payload had no command string."))
 
-if command.strip().startswith("tss "):
+if command.strip().startswith("tss ") or command.strip().startswith("env TSS_AGENT="):
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": tool_input}})
 
 updated_input = dict(tool_input)
-updated_input["command"] = "tss run -- bash -lc " + shlex.quote(command)
+updated_input["command"] = "env TSS_AGENT=claude-code tss run -- bash -lc " + shlex.quote(command)
 
 emit({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "updatedInput": updated_input,
-        "additionalContext": "TSS wrapped this Bash command. Use `tss raw <id>` for raw recovery when output is filtered.",
+        "additionalContext": "TSS wrapped this Bash command as claude-code. If a child/sub-agent shell does not inherit this hook, run `eval \"$(tss shell-init --agent claude-code --subagent)\"` in that child shell or prefix commands with `TSS_AGENT=claude-code TSS_SUBAGENT=1 tss run --`.",
     }
 })
