@@ -3,6 +3,12 @@ description: Use TSS for compact terminal output when exact raw output is not re
 alwaysApply: true
 ---
 
-Prefer `tss run -- <command>` for terminal commands that produce large human-readable output. Do not use TSS for structured output, patches, redirected or piped commands, or any command where exact stdout/stderr is required. If TSS reports omitted output, inspect it with `tss raw <id>`.
+Prefer `TSS_AGENT=cursor tss run -- <command>` for terminal commands that produce large human-readable output. Do not use TSS for structured output, patches, redirected or piped commands, or any command where exact stdout/stderr is required. If TSS reports omitted output, inspect it with `tss raw <id>`.
 
 This rule is instruction-only. Cursor terminal commands are not automatically rewritten by TSS.
+
+For delegated or sub-agent shells, use:
+
+```bash
+TSS_AGENT=cursor TSS_SUBAGENT=1 tss run -- <command>
+```

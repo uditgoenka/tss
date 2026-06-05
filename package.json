@@ -1,6 +1,6 @@
 {
   "name": "@uditgoenka/tss",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Trust-first token saving CLI for agent terminal output",
   "license": "Apache-2.0",
   "repository": {
@@ -10,6 +10,10 @@
   "homepage": "https://github.com/uditgoenka/tss#readme",
   "bugs": {
     "url": "https://github.com/uditgoenka/tss/issues"
+  },
+  "tss": {
+    "releaseVersion": "0.1.01",
+    "releaseTag": "v0.1.01"
   },
   "bin": {
     "tss": "npm/bin/tss"
