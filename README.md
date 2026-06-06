@@ -318,9 +318,17 @@ bun add --trust github:uditgoenka/tss#v0.1.01
 Bun requires `--trust` for GitHub dependencies that download a checked release
 binary during `postinstall`.
 
-After npm registry publication, the scoped package will also install with
-`npm install -g @uditgoenka/tss`. Registry publication is wired through
-`.github/workflows/npm-publish.yml` and requires the repository secret
+From the npm registry:
+
+```bash
+npm install -g @uditgoenka/tss
+pnpm add @uditgoenka/tss
+yarn add @uditgoenka/tss
+bun add --trust @uditgoenka/tss
+```
+
+The npm package is published as `@uditgoenka/tss`. Registry publication is wired
+through `.github/workflows/npm-publish.yml` and uses the repository secret
 `NPM_TOKEN`.
 
 From Homebrew:
