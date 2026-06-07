@@ -121,7 +121,7 @@ fn foundation_skeleton_commands_are_recognized() {
         (&["gain"], "TSS Token Savings (Local Scope)"),
         (
             &["init", "codex", "--dry-run"],
-            "tss init codex: dry run\nscope: Project\nmode: InstructionOnly\n- Check `codex --version`; install only instructions unless the user opts into a shell wrapper.\n- Write reviewable TSS guidance for Codex; merge into AGENTS.md manually after review.\n- Optional shell wrapper for users who explicitly opt in; not enabled automatically.\nwould write ",
+            "tss init codex: dry run\nscope: Project\nmode: BashCommandRewrite\n- Check `codex --version`; PreToolUse hook support requires Codex hooks to be enabled and trusted.\n- Install Codex PreToolUse hook that wraps shell command fields through TSS.\n- Write mergeable Codex hook settings; merge into .codex/hooks.json to activate.\n- Write reviewable TSS guidance for Codex as a fallback and sub-agent reminder.\n- Optional shell wrapper for users who explicitly opt in; not enabled automatically.\nwarning: Merge .codex/hooks.tss.json into .codex/hooks.json to activate command interception.\nwould write ",
         ),
         (&["verify"], "tss verify: ok\n"),
     ];
@@ -144,6 +144,8 @@ fn foundation_skeleton_commands_are_recognized() {
                 stdout.starts_with(expected_stdout),
                 "unexpected init output: {stdout}"
             );
+            assert!(stdout.contains(".codex/hooks/tss-pre-tool-use.py"));
+            assert!(stdout.contains(".codex/hooks.tss.json"));
             assert!(stdout.contains("AGENTS.tss.md"));
             assert!(stdout.contains(".codex/tss-wrapper.sh"));
         } else if args.first() == Some(&"gain") {

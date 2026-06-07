@@ -1,6 +1,6 @@
 use super::installer::{
-    file_exists, remove_file, rendered_file, version_check, write_file, Agent, AgentIntegration,
-    Detection, InstallPlan, MutationMode, Scope, UninstallPlan, Verification,
+    file_contains, file_exists, remove_file, rendered_file, version_check, write_file, Agent,
+    AgentIntegration, Detection, InstallPlan, MutationMode, Scope, UninstallPlan, Verification,
 };
 
 const HOOK: &str = include_str!("../../assets/hooks/claude/tss-pre-tool-use.py");
@@ -16,13 +16,16 @@ impl AgentIntegration for ClaudeIntegration {
 
     fn detect(&self, scope: &Scope) -> Detection {
         let installed = file_exists(scope, ".claude/hooks/tss-pre-tool-use.py");
+        let active = installed
+            && file_contains(scope, ".claude/settings.json", "tss-pre-tool-use.py")
+            && file_contains(scope, ".claude/settings.json", "PreToolUse");
         Detection {
             agent: Agent::Claude,
             installed,
-            active: installed && file_exists(scope, ".claude/settings.json"),
+            active,
             version: None,
             notes: vec![String::from(
-                "Run `claude --version` during install and merge .claude/settings.tss.json into active Claude settings.",
+                "Run `claude --version` during install and verify active Claude settings include the TSS PreToolUse hook.",
             )],
         }
     }

@@ -1,6 +1,6 @@
 # TSS v0.1.01 Evals
 
-Tested on June 5, 2026.
+Tested on June 5, 2026. Hook-routing regression re-tested on June 7, 2026.
 
 These evals are local regression checks for TSS v0.1.01. They are not billing
 claims. Token counts are estimated with the project estimator
@@ -14,6 +14,7 @@ cache behavior, agent context policy, and model.
 | Mixed fixture regression | 50 | 50/50 passed | 5 estimated tokens saved, 6.6% on final iteration | filtered output, passthrough output, raw recovery, gain dashboard shape |
 | Large synthetic output | 50 | 50/50 passed | 139.7K estimated tokens saved, 100.0% rounded on final iteration | high-savings behavior on deterministic long terminal output with raw recovery |
 | Agent/sub-agent gain regression | 50 | 50/50 passed | 10 estimated tokens saved, 6.7% on final iteration | `TSS_AGENT`, `TSS_SUBAGENT`, shell-wrapped inner-command filtering, `By Agent`, `Sub-Agent Usage`, `Top Sub-Agents` |
+| Live Claude/Codex hook routing regression | 1 live-machine pass + contract tests | passed | new agent rows recorded in local ledger | active settings reference TSS hooks, hook JSON rewrites shell command fields, stale manual rows are not re-attributed |
 
 ## What These Evals Prove
 
@@ -46,6 +47,69 @@ TSS v0.1.01 is evaluated against a trust-first contract:
 The evals intentionally use temporary state directories so previous local usage
 cannot inflate savings numbers. Each iteration starts with a fresh analytics
 ledger and raw-output store.
+
+## Live Hook Routing Regression
+
+Date tested: June 7, 2026.
+
+This regression checks the failure mode where `tss run -- <command>` records
+analytics correctly, but the agent host is not actually routing shell commands
+through TSS. That produces a stuck `tss gain` view where new Claude Code and
+Codex usage keeps appearing as `Manual / Unknown` or does not appear at all.
+
+Checks performed:
+
+- Installed the local Rust binary to the active shell path:
+  `/Users/uditgoenka/.local/bin/tss -> /Users/uditgoenka/.cargo/bin/tss`.
+- Installed `~/.claude/hooks/tss-pre-tool-use.py` and verified active Claude
+  `PreToolUse` contains a `Bash` matcher that runs the TSS hook.
+- Installed `~/.codex/hooks/tss-pre-tool-use.py` and verified active Codex
+  `PreToolUse` contains a `Bash|exec_command|shell` matcher that runs the TSS
+  hook.
+- Removed the stale non-TSS Claude shell rewrite hook from active settings.
+- Verified the Claude hook rewrites:
+  `cat tests/fixtures/files/cat_long_single_file.txt` to
+  `env TSS_AGENT=claude-code tss run -- bash -lc ...`.
+- Verified the Codex hook rewrites both `tool_input.cmd` and
+  `tool_input.command` to `env TSS_AGENT=codex tss run -- bash -lc ...`.
+- Verified both hooks leave `TSS_BYPASS=1 ...` unchanged.
+- Executed rewritten Claude and Codex commands against the real local ledger.
+- Executed a named sub-agent command with
+  `TSS_AGENT=codex TSS_SUBAGENT=1 TSS_SUBAGENT_NAME=verifier`.
+
+Live dashboard proof after the regression commands:
+
+```text
+By Agent
+------------------------------------------------------------
+ #  Agent              Count    Sub     Saved    Avg%    Time  Impact
+------------------------------------------------------------
+ 1. Manual / Unknown     203      0     19.2K   20.3%    2.2s  ██░░░░░░░░
+ 2. Codex                  3      2        15    6.8%   291ms  █░░░░░░░░░
+ 3. Claude Code           10      0         5    0.8%   292ms  ░░░░░░░░░░
+
+Sub-Agent Usage
+------------------------------------------------------------
+sub-agent commands                      2
+sub-agent input tokens                148
+sub-agent output tokens               138
+sub-agent tokens saved                 10 (  6.8%)
+
+Top Sub-Agents
+ #  Agent              Name             Count     Saved    Avg%  Impact
+------------------------------------------------------------
+ 1. Codex              sub-agent            1         5    6.8%  █░░░░░░░░░
+ 2. Codex              verifier             1         5    6.8%  █░░░░░░░░░
+```
+
+Interpretation:
+
+- Historical `Manual / Unknown` rows remain historical; TSS does not rewrite
+  old ledger events after the fact.
+- New Claude Code and Codex commands now create their own `By Agent` rows.
+- `TSS_SUBAGENT=1` increments the `Sub` column and the `Sub-Agent Usage`
+  section.
+- `TSS_SUBAGENT_NAME=<name>` controls the name in `Top Sub-Agents`.
 
 ## Mixed Fixture Regression
 

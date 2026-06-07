@@ -574,7 +574,7 @@ command mutation API.
 | GitHub Copilot CLI suggestion mode | `tss init -g --copilot-cli` | `copilot-cli` | suggestion/deny mode | CLI host limitations are represented explicitly |
 | Cursor | `tss init --agent cursor` | `cursor` | project rule | instruction-only terminal guidance |
 | Gemini CLI | `tss init -g --gemini` | `gemini` | extension + memory file | instruction-only in v0.1.01 |
-| Codex | `tss init -g --codex` | `codex` | `AGENTS.md` + optional wrapper | instruction/wrapper mode; no fake hook parity |
+| Codex | `tss init -g --codex` | `codex` | `.codex/hooks.json` PreToolUse + `AGENTS.md` fallback | command-field rewrite when Codex hooks are active; explicit wrapper fallback |
 | Windsurf | `tss init --agent windsurf` | `windsurf` | `.windsurfrules` | project-scoped instruction mode |
 | Cline | `tss init --agent cline` | `cline` | `.clinerules` | project-scoped instruction mode |
 | Roo Code | `tss init --agent roo` | `roo-code` | `.roo/rules` | project-scoped instruction mode |

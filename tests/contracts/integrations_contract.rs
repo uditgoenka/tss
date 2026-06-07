@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
+use std::fs;
+
 #[path = "../../src/analytics/mod.rs"]
 mod analytics;
 #[path = "../../src/integrations/mod.rs"]
@@ -79,11 +81,30 @@ fn unsupported_command_mutation_modes_are_reported_plainly() {
         .iter()
         .find(|plan| plan.agent == Agent::Codex)
         .unwrap();
-    assert_eq!(codex.mutation_mode, MutationMode::InstructionOnly);
+    assert_eq!(codex.mutation_mode, MutationMode::BashCommandRewrite);
+    assert_eq!(
+        codex.commands_intercepted,
+        vec!["tool_input.cmd", "tool_input.command"]
+    );
     assert!(codex
         .blind_spots
         .iter()
-        .any(|spot| spot.contains("no general")));
+        .any(|spot| spot.contains(".codex/hooks.json")));
+    assert!(codex.rendered_files.iter().any(|file| {
+        file.path.ends_with(".codex/hooks/tss-pre-tool-use.py")
+            && file.contents.contains("updatedInput")
+            && file.contents.contains("TSS_AGENT=codex")
+            && file.contents.contains("bash -lc")
+            && file.contents.contains("tool_input")
+            && file.contents.contains("\"cmd\"")
+            && file.contents.contains("\"command\"")
+            && file.contents.contains("TSS_BYPASS=1")
+    }));
+    assert!(codex.rendered_files.iter().any(|file| {
+        file.path.ends_with(".codex/hooks.tss.json")
+            && file.contents.contains("PreToolUse")
+            && file.contents.contains("tss-pre-tool-use.py")
+    }));
 
     let cursor = plans
         .iter()
@@ -150,6 +171,70 @@ fn unsupported_command_mutation_modes_are_reported_plainly() {
         .blind_spots
         .iter()
         .any(|spot| spot.contains("planned integration")));
+}
+
+#[test]
+fn hook_detection_requires_active_settings_reference() {
+    let root = temp_scope_root("active-hook-detection");
+    let scope = Scope::user(&root);
+    let claude = all_integrations()
+        .into_iter()
+        .find(|integration| integration.agent() == Agent::Claude)
+        .unwrap();
+    let codex = all_integrations()
+        .into_iter()
+        .find(|integration| integration.agent() == Agent::Codex)
+        .unwrap();
+
+    fs::create_dir_all(root.join(".claude/hooks")).unwrap();
+    fs::write(
+        root.join(".claude/hooks/tss-pre-tool-use.py"),
+        "#!/usr/bin/env python3\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join(".claude/settings.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"rtk hook claude"}]}]}}"#,
+    )
+    .unwrap();
+    let claude_inactive = claude.detect(&scope);
+    assert!(claude_inactive.installed);
+    assert!(
+        !claude_inactive.active,
+        "Claude must not report active when settings still point to another hook"
+    );
+
+    fs::write(
+        root.join(".claude/settings.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"python3 \"$HOME/.claude/hooks/tss-pre-tool-use.py\""}]}]}}"#,
+    )
+    .unwrap();
+    assert!(claude.detect(&scope).active);
+
+    fs::create_dir_all(root.join(".codex/hooks")).unwrap();
+    fs::write(
+        root.join(".codex/hooks/tss-pre-tool-use.py"),
+        "#!/usr/bin/env python3\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join(".codex/hooks.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"node \"$HOME/.claude/hooks/scout-block.cjs\""}]}]}}"#,
+    )
+    .unwrap();
+    let codex_inactive = codex.detect(&scope);
+    assert!(codex_inactive.installed);
+    assert!(
+        !codex_inactive.active,
+        "Codex must not report active until hooks.json references TSS"
+    );
+
+    fs::write(
+        root.join(".codex/hooks.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"python3 \"$HOME/.codex/hooks/tss-pre-tool-use.py\""}]}]}}"#,
+    )
+    .unwrap();
+    assert!(codex.detect(&scope).active);
 }
 
 #[test]
@@ -261,4 +346,16 @@ fn doctor_reports_active_status_interception_and_blind_spots() {
     assert!(report.summary.contains("blind spots"));
     assert!(report.summary.contains("Command coverage"));
     assert!(report.summary.contains("Issue classes"));
+}
+
+fn temp_scope_root(test_name: &str) -> std::path::PathBuf {
+    let unique = format!(
+        "tss-integrations-{test_name}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    std::env::temp_dir().join(unique)
 }

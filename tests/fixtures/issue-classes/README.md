@@ -101,7 +101,7 @@ slice in each category.
 | Windows/path | P1 | `windows-path/crlf-test-output.raw.txt` | CRLF output comparisons do not manufacture diffs or hide failures. |
 | Windows/path | P2 | `windows-path/path-with-spaces.raw.txt` | Paths with spaces remain quoted or tokenized correctly. |
 | Integrations | P0 | `integrations/claude-pretooluse-valid-rewrite.raw.json` | Claude hook output uses the current host JSON shape and does not emit stderr on success. |
-| Integrations | P0 | `integrations/codex-instruction-only-init.raw.txt` | Codex integration reports instruction/wrapper limits instead of fake hook parity. |
+| Integrations | P0 | `integrations/codex-instruction-only-init.raw.txt` | Codex integration reports hook activation limits and requires `.codex/hooks.json` to reference TSS before claiming active interception. |
 | Integrations | P1 | `integrations/gemini-beforetool-command.raw.json` | Gemini hook payloads validate and preserve original command on passthrough. |
 | Integrations | P1 | `integrations/copilot-deny-with-suggestion.raw.json` | Copilot CLI limitation is represented as suggestion/deny behavior, not silent mutation. |
 | Integrations | P2 | `integrations/opencode-plugin-before-execute.raw.json` | OpenCode plugin fixtures preserve command, cwd, and rollback expectations. |

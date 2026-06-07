@@ -33,7 +33,15 @@ command = tool_input.get("command")
 if not isinstance(command, str) or not command.strip():
     emit(empty_context("TSS hook skipped: Bash payload had no command string."))
 
-if command.strip().startswith("tss ") or command.strip().startswith("env TSS_AGENT="):
+trimmed = command.strip()
+if (
+    trimmed.startswith("tss ")
+    or trimmed.startswith("command tss ")
+    or trimmed.startswith("env TSS_AGENT=")
+    or trimmed.startswith("TSS_AGENT=")
+    or trimmed.startswith("TSS_BYPASS=1")
+    or trimmed.startswith("env TSS_BYPASS=1")
+):
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": tool_input}})
 
 updated_input = dict(tool_input)

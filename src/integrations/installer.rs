@@ -307,3 +307,9 @@ pub fn rendered_file(path: String, contents: &str) -> RenderedFile {
 pub fn file_exists(scope: &Scope, relative: &str) -> bool {
     scope.root.join(relative).exists()
 }
+
+pub fn file_contains(scope: &Scope, relative: &str, needle: &str) -> bool {
+    std::fs::read_to_string(scope.root.join(relative))
+        .map(|contents| contents.contains(needle))
+        .unwrap_or(false)
+}
