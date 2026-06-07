@@ -1,6 +1,7 @@
 use super::installer::{
-    file_contains, file_exists, remove_file, rendered_file, version_check, write_file, Agent,
-    AgentIntegration, Detection, InstallPlan, MutationMode, Scope, UninstallPlan, Verification,
+    file_contains, file_contains_any, file_exists, remove_file, rendered_file, version_check,
+    write_file, Agent, AgentIntegration, Detection, InstallPlan, MutationMode, Scope,
+    UninstallPlan, Verification,
 };
 
 const INSTRUCTIONS: &str = include_str!("../../assets/hooks/codex/AGENTS.tss.md");
@@ -19,16 +20,28 @@ impl AgentIntegration for CodexIntegration {
     fn detect(&self, scope: &Scope) -> Detection {
         let installed = file_exists(scope, ".codex/hooks/tss-pre-tool-use.py")
             || file_exists(scope, "AGENTS.tss.md")
-            || file_exists(scope, "AGENTS.md");
+            || file_contains(scope, "AGENTS.md", "TSS_AGENT=codex")
+            || file_contains(scope, "AGENTS.md", "TSS Command Output");
+        let rtk_conflict = file_contains_any(
+            scope,
+            ".codex/hooks.json",
+            &["rtk hook", " rtk ", "/rtk", "\"rtk"],
+        );
         let active = file_exists(scope, ".codex/hooks/tss-pre-tool-use.py")
             && file_contains(scope, ".codex/hooks.json", "tss-pre-tool-use.py")
             && file_contains(scope, ".codex/hooks.json", "PreToolUse");
+        let mut notes = vec![String::from("Codex hook support is enabled when .codex/hooks.json references .codex/hooks/tss-pre-tool-use.py; AGENTS instructions remain a fallback.")];
+        if rtk_conflict {
+            notes.push(String::from(
+                "RTK conflict detected: Codex hooks reference RTK; use one active shell command-rewriting hook per host.",
+            ));
+        }
         Detection {
             agent: Agent::Codex,
             installed,
             active,
             version: None,
-            notes: vec![String::from("Codex hook support is enabled when .codex/hooks.json references .codex/hooks/tss-pre-tool-use.py; AGENTS instructions remain a fallback.")],
+            notes,
         }
     }
 
@@ -68,9 +81,7 @@ impl AgentIntegration for CodexIntegration {
                 String::from("hook config must be merged into .codex/hooks.json and trusted by Codex"),
                 String::from("non-shell tools are not mutated"),
             ],
-            warnings: vec![String::from(
-                "Merge .codex/hooks.tss.json into .codex/hooks.json to activate command interception.",
-            )],
+            warnings: codex_warnings(scope),
             restart_required: false,
             docs_url: Some(String::from(DOCS_URL)),
         }
@@ -116,4 +127,20 @@ impl AgentIntegration for CodexIntegration {
             ],
         }
     }
+}
+
+fn codex_warnings(scope: &Scope) -> Vec<String> {
+    let mut warnings = vec![String::from(
+        "Merge .codex/hooks.tss.json into .codex/hooks.json to activate command interception.",
+    )];
+    if file_contains_any(
+        scope,
+        ".codex/hooks.json",
+        &["rtk hook", " rtk ", "/rtk", "\"rtk"],
+    ) {
+        warnings.push(String::from(
+            "RTK hook reference detected. Keep TSS in coexist mode or remove the RTK hook before TSS owns Codex command rewriting.",
+        ));
+    }
+    warnings
 }

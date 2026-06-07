@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-CLI-orange?logo=rust&logoColor=white" alt="Rust CLI"></a>
-  <a href="https://github.com/uditgoenka/tss/releases"><img src="https://img.shields.io/badge/version-0.1.01-blue.svg" alt="Version 0.1.01"></a>
+  <a href="https://github.com/uditgoenka/tss/releases"><img src="https://img.shields.io/badge/version-0.1.02-blue.svg" alt="Version 0.1.02"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-green.svg" alt="License Apache-2.0"></a>
   <a href="package.json"><img src="https://img.shields.io/badge/npm-@uditgoenka/tss-CB3837?logo=npm&logoColor=white" alt="npm @uditgoenka/tss"></a>
   <a href="packaging/homebrew/tss.rb.template"><img src="https://img.shields.io/badge/Homebrew-ready-FBB040?logo=homebrew&logoColor=black" alt="Homebrew ready"></a>
@@ -87,7 +87,7 @@ TSS starts from a stricter contract:
   caution.
 - Make compatibility status visible with `tss doctor` and `tss compat`.
 
-v0.1.01 is a working Rust baseline, not only a plan. It is intentionally honest:
+v0.1.02 is a working Rust baseline, not only a plan. It is intentionally honest:
 some command families are optimized, many familiar commands are recognized as
 passthrough-compatible, and dangerous shapes are blocked from filtering.
 
@@ -170,8 +170,8 @@ emits the raw command output unchanged.
 | Status | Meaning | Runtime behavior |
 |--------|---------|------------------|
 | `optimized` | Fixture-backed filter exists for this command shape. | May emit compact output with raw recovery. |
-| `passthrough-compatible` | TSS recognizes the command but should not compress it in v0.1.01. | Runs raw and preserves stdout/stderr/exit code. |
-| `planned` | Known parity target without a v0.1.01 adapter. | Runs raw and appears in compatibility reports. |
+| `passthrough-compatible` | TSS recognizes the command but should not compress it in v0.1.02. | Runs raw and preserves stdout/stderr/exit code. |
+| `planned` | Known parity target without a v0.1.02 adapter. | Runs raw and appears in compatibility reports. |
 | `blocked` | Shape violates the trust contract for filtering. | Passes through or denies only under explicit guards. |
 
 ---
@@ -197,7 +197,7 @@ tss git log -n 10 --oneline
 tss git diff
 ```
 
-Safe status and log shapes are compacted. Patch output stays raw in v0.1.01
+Safe status and log shapes are compacted. Patch output stays raw in v0.1.02
 unless TSS can preserve the patch exactly.
 
 ### Test Output
@@ -220,7 +220,7 @@ tss pnpm install
 tss brew install node
 ```
 
-Package-manager output is recognized but raw in v0.1.01. Scripts, installers,
+Package-manager output is recognized but raw in v0.1.02. Scripts, installers,
 and resolver output are too risky to summarize without dedicated fixtures.
 
 ### Gain Dashboard
@@ -309,10 +309,10 @@ cargo install --path .
 From JavaScript package managers using the GitHub release tag:
 
 ```bash
-npm install -g github:uditgoenka/tss#v0.1.01
-pnpm add github:uditgoenka/tss#v0.1.01
-yarn add github:uditgoenka/tss#v0.1.01
-bun add --trust github:uditgoenka/tss#v0.1.01
+npm install -g github:uditgoenka/tss#v0.1.02
+pnpm add github:uditgoenka/tss#v0.1.02
+yarn add github:uditgoenka/tss#v0.1.02
+bun add --trust github:uditgoenka/tss#v0.1.02
 ```
 
 Bun requires `--trust` for GitHub dependencies that download a checked release
@@ -341,19 +341,18 @@ If you have already tapped `uditgoenka/tap`, `brew install tss` will resolve to
 the same formula. On a fresh machine, plain `brew install tss` will not work
 until the tap is installed or TSS is accepted into Homebrew core.
 
-The npm wrapper installs the release binary for supported platforms. The
-Homebrew tap builds from the v0.1.01 source tag using Cargo.
+The npm wrapper installs a checked release binary for supported platforms. The
+Homebrew tap builds from the v0.1.02 source tag using Cargo.
 
 ### Pre-built Binaries
 
-v0.1.01 release binaries are intended for GitHub Releases:
+v0.1.02 publishes the npm prebuilt for the platform verified in this release:
 
-- macOS arm64 / x64
-- Linux arm64 / x64
-- Windows x64
+- macOS arm64: `tss-0.1.02-darwin-arm64`
 
-The npm and Homebrew templates install the same Rust binary; they do not
-reimplement the CLI in JavaScript or Ruby.
+Other platforms should use Cargo or the Homebrew source build until their
+release assets and checksums are added. The npm and Homebrew templates install
+the same Rust binary; they do not reimplement the CLI in JavaScript or Ruby.
 
 ---
 
@@ -416,9 +415,9 @@ opt-in because global command shadowing can surprise normal interactive shells.
 
 ---
 
-## Optimized v0.1.01 Families
+## Optimized v0.1.02 Families
 
-These families have contract tests and fixtures in v0.1.01:
+These families have contract tests and fixtures in v0.1.02:
 
 | Family | Commands / shapes | What TSS preserves |
 |--------|-------------------|--------------------|
@@ -432,10 +431,10 @@ These families have contract tests and fixtures in v0.1.01:
 | Rust | `cargo test`, `cargo check` | compiler errors, spans, failed tests |
 | Python | `pytest` | collection errors, tracebacks, failures, summaries |
 
-### Passthrough-Compatible v0.1.01 Families
+### Passthrough-Compatible v0.1.02 Families
 
 These commands are recognized for familiar terminal workflows but preserved raw
-in v0.1.01:
+in v0.1.02:
 
 ```bash
 npm pnpm yarn yarnpkg npx pnpx bun bunx deno corepack brew
@@ -446,13 +445,13 @@ pip pip3 pipx uv uvx poetry rye
 Package managers can run arbitrary scripts and installers. TSS does not compress
 them until a fixture proves the output can be safely summarized.
 
-### High-Saving Parity Gaps In v0.1.01
+### High-Saving Parity Gaps In v0.1.02
 
 These rows are called out because they often dominate token usage in real
-agent sessions. TSS v0.1.01 keeps the truth first: unsupported reducers run raw
+agent sessions. TSS v0.1.02 keeps the truth first: unsupported reducers run raw
 instead of pretending to save tokens.
 
-| Command shape | TSS v0.1.01 behavior |
+| Command shape | TSS v0.1.02 behavior |
 |---------------|---------------------|
 | `git stash show` | raw passthrough; stash-specific reducer planned |
 | `lint eslint ...` | planned; no `tss lint` alias or ESLint adapter yet |
@@ -464,7 +463,7 @@ instead of pretending to save tokens.
 | `aws s3api list-objects` | raw passthrough; cloud adapters planned |
 
 Analytics commands beyond `tss gain` and `tss gain --json` are also roadmap
-items in v0.1.01: graph/history/daily views, missed-opportunity discovery, and
+items in v0.1.02: graph/history/daily views, missed-opportunity discovery, and
 session-adoption reports are not implemented yet.
 
 ---
@@ -474,18 +473,20 @@ session-adoption reports are not implemented yet.
 TSS reports estimates, not billing guarantees. Provider-side caching, model
 tokenizers, and agent context policies change actual savings.
 
-<h3 align="center">v0.1.01 Regression Proof</h3>
+<h3 align="center">v0.1.02 Regression Proof</h3>
 
 <p align="center">
-  <strong>150/150 local eval iterations passed on June 5, 2026.</strong><br>
-  The regression loop verifies filtered output, passthrough output, raw recovery,
-  and the dashboard-style <code>tss gain</code> report. A deterministic
+  <strong>150/150 local eval iterations passed on June 5, 2026, then v0.1.02
+  RTK-coexistence regressions were re-tested on June 7, 2026.</strong><br>
+  The baseline loop verifies filtered output, passthrough output, raw recovery,
+  and the dashboard-style <code>tss gain</code> report. The v0.1.02 regression
+  adds hook ownership and <code>tss doctor</code> conflict checks. A deterministic
   30,000-line synthetic output eval measured <strong>139.7K estimated tokens
   saved</strong> with raw recovery intact. See <a href="evals.md">evals.md</a> for the dated
   commands, criteria, caveats, and exact result.
 </p>
 
-| Operation | Raw behavior | TSS behavior | v0.1.01 status |
+| Operation | Raw behavior | TSS behavior | v0.1.02 status |
 |-----------|--------------|--------------|---------------|
 | `git status --short --branch` | repeated file/status lines | branch + counts + changed files | optimized |
 | long `git log` | many commits | keeps leading commits and merge visibility | optimized |
@@ -508,21 +509,21 @@ tss gain --json
 
 ## TSS vs RTK
 
-| Area | TSS v0.1.01 | RTK |
+| Area | TSS v0.1.02 | RTK |
 |------|------------|-----|
 | Core promise | Save tokens only when output remains truthful and recoverable. | Broad terminal-output compression for agent workflows. |
 | Default behavior | Passthrough for unknown, risky, structured, or state-changing command shapes. | Broader command filtering surface with more aggressive savings targets. |
 | Raw recovery | Lossy summaries include `tss raw <id>` when local storage is enabled. | Recovery behavior depends on the specific command path and setup. |
 | Failure handling | Non-zero exits, failed tests, compiler errors, and omission markers are contract-tested. | Users should verify failure summaries carefully on risky command shapes. |
 | Structured output | JSON, diffs, null-delimited output, and exact modes pass through unless parser-backed. | Structured output can be fragile if filtering is not parser-backed. |
-| Package managers | `npm`, `pnpm`, `yarn`, `bun`, `deno`, `pip`, and `brew` are recognized but raw in v0.1.01. | More package-manager convenience may be available depending on command coverage. |
+| Package managers | `npm`, `pnpm`, `yarn`, `bun`, `deno`, `pip`, and `brew` are recognized but raw in v0.1.02. | More package-manager convenience may be available depending on command coverage. |
 | Agent support | 16 tool surfaces are represented; several are instruction-only because host APIs differ. `tss gain` breaks down usage by agent tag. | Established integrations and auto-rewrite flows for many tools. |
 | Sub-agent leakage | `TSS_SUBAGENT=1`, `TSS_AGENT_ROLE=sub-agent`, and `tss shell-init --subagent` make child-agent usage visible in `tss gain`. Host hook inheritance is still host-controlled. | Parent hook inheritance can vary by host and may miss child-agent shells. |
-| Privacy | Local raw store and local analytics; args redacted; no remote telemetry in v0.1.01. | Review telemetry/config behavior for the installed version and setup. |
-| Distribution | Rust binary with Cargo, npm wrapper, and Homebrew formula template for v0.1.01. | Existing package-manager distribution and release assets. |
+| Privacy | Local raw store and local analytics; args redacted; no remote telemetry in v0.1.02. | Review telemetry/config behavior for the installed version and setup. |
+| Distribution | Rust binary with Cargo, npm wrapper, and Homebrew formula template for v0.1.02. | Existing package-manager distribution and release assets. |
 | Verification posture | Fixture-backed filters first; passthrough is treated as a valid safety result. | Optimized breadth is higher, but users should audit correctness-sensitive cases. |
 
-TSS is intentionally conservative in v0.1.01. Lower savings on some commands is
+TSS is intentionally conservative in v0.1.02. Lower savings on some commands is
 acceptable when the alternative is hiding the line that explains a failure.
 
 ---
@@ -544,6 +545,28 @@ claims.
 Passthrough-compatible is not a failure. It means TSS chose correctness over
 unsafe savings for that command shape.
 
+### RTK Coexistence
+
+TSS can be installed on a machine that also has RTK installed, but only one
+command-rewriting hook should own a given agent host at a time.
+
+Safe migration rules:
+
+- Keep both binaries if you want; TSS does not delete RTK stats, caches, or
+  binaries.
+- Do not keep both RTK and TSS active as the same Claude/Codex/Copilot shell
+  rewrite hook.
+- TSS hooks skip commands already owned by RTK, including `rtk ...`,
+  `/path/to/rtk ...`, `env -i rtk ...`, and `command rtk ...`.
+- TSS hooks also skip `tss-wrapper.sh` so optional wrapper scripts do not get
+  nested inside another TSS invocation.
+- Run `tss doctor` after installation. It reports RTK conflicts when active
+  host settings still reference RTK command-rewrite hooks.
+
+Use coexist mode when testing TSS alongside RTK: install TSS files, inspect
+`tss init --dry-run`, but leave the RTK hook active until you are ready to make
+TSS the single command-rewrite owner for that host.
+
 ### Failure Classes Covered
 
 | Issue class | TSS response |
@@ -562,18 +585,18 @@ unsafe savings for that command shape.
 
 ## Supported AI Tools
 
-TSS v0.1.01 includes integration plans and assets for common coding agents. The
+TSS v0.1.02 includes integration plans and assets for common coding agents. The
 status column is intentionally explicit: not every host exposes a safe terminal
 command mutation API.
 
-| Tool | Install command | Gain tag | Method | v0.1.01 status |
+| Tool | Install command | Gain tag | Method | v0.1.02 status |
 |------|-----------------|----------|--------|---------------|
 | Claude Code | `tss init -g` | `claude-code` | PreToolUse Bash hook | command rewrite asset; TSS never grants command permission |
-| GitHub Copilot (VS Code) | manual guidance | `copilot` | editor instructions | instruction-only in v0.1.01; no VS Code auto-rewrite claim |
+| GitHub Copilot (VS Code) | manual guidance | `copilot` | editor instructions | instruction-only in v0.1.02; no VS Code auto-rewrite claim |
 | GitHub Copilot CLI / Cloud Agent | `tss init -g --copilot` | `copilot` | `.github/hooks` preToolUse hook | command-argument rewrite plan |
 | GitHub Copilot CLI suggestion mode | `tss init -g --copilot-cli` | `copilot-cli` | suggestion/deny mode | CLI host limitations are represented explicitly |
 | Cursor | `tss init --agent cursor` | `cursor` | project rule | instruction-only terminal guidance |
-| Gemini CLI | `tss init -g --gemini` | `gemini` | extension + memory file | instruction-only in v0.1.01 |
+| Gemini CLI | `tss init -g --gemini` | `gemini` | extension + memory file | instruction-only in v0.1.02 |
 | Codex | `tss init -g --codex` | `codex` | `.codex/hooks.json` PreToolUse + `AGENTS.md` fallback | command-field rewrite when Codex hooks are active; explicit wrapper fallback |
 | Windsurf | `tss init --agent windsurf` | `windsurf` | `.windsurfrules` | project-scoped instruction mode |
 | Cline | `tss init --agent cline` | `cline` | `.clinerules` | project-scoped instruction mode |
@@ -592,7 +615,7 @@ the planned writes before installing.
 ### Claude Code Sub-Agent Coverage
 
 Claude Code parent hooks may not fire inside Task/sub-agent contexts. TSS does
-not claim to control that host-level inheritance. v0.1.01 addresses the practical
+not claim to control that host-level inheritance. v0.1.02 addresses the practical
 failure mode in two ways:
 
 1. Hook-wrapped `bash -lc "<simple command>"` calls are filtered and recorded as
@@ -619,7 +642,7 @@ cannot record savings for that child shell.
 
 ## Configuration
 
-TSS configuration is environment-variable based in v0.1.01.
+TSS configuration is environment-variable based in v0.1.02.
 
 | Setting | Meaning |
 |---------|---------|
@@ -651,7 +674,7 @@ TSS is local-first.
 | `TSS_RAW_DIR` | changes raw-output storage directory |
 | `TSS_ANALYTICS_FILE` | changes analytics ledger path |
 
-No remote telemetry is emitted in v0.1.01.
+No remote telemetry is emitted in v0.1.02.
 Agent and sub-agent tags are local analytics labels only; command arguments are
 still redacted by default.
 
@@ -679,7 +702,7 @@ cargo uninstall tss
 brew uninstall tss
 ```
 
-Agent integration cleanup is file-based in v0.1.01. Run a dry run to inspect the
+Agent integration cleanup is file-based in v0.1.02. Run a dry run to inspect the
 installed paths, then remove generated TSS files for that agent:
 
 ```bash
@@ -772,7 +795,7 @@ A: Lossy summaries include a `tss raw <id>` handle. Use `tss raw <id>` to recove
 the exact stored output.
 
 **Q: Does TSS send telemetry?**<br>
-A: No remote telemetry in v0.1.01. The analytics ledger is local and redacts args.
+A: No remote telemetry in v0.1.02. The analytics ledger is local and redacts args.
 
 **Q: Can I disable storage?**<br>
 A: Yes. Set `TSS_NO_STORE=1`.

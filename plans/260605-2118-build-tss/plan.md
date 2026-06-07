@@ -56,7 +56,9 @@ Each phase must start with its first failing test or fixture before production c
 
 ## Cross-Plan Dependencies
 
-None found. The workspace had no existing unfinished plans.
+Follow-up plan `plans/260607-1912-v0.1.02-rtk-coexistence` handles the v0.1.02
+release slice for RTK coexistence, stale-hook conflict detection, and updated
+package surfaces.
 
 ## Execution Strategy
 

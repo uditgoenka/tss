@@ -18,6 +18,45 @@ def empty_context(message):
     }
 
 
+def first_executable(command):
+    try:
+        parts = shlex.split(command)
+    except Exception:
+        parts = command.strip().split()
+
+    index = 0
+    if parts[:1] == ["env"]:
+        index = 1
+        while index < len(parts):
+            part = parts[index]
+            if part == "--":
+                index += 1
+                break
+            if part in ("-S", "--split-string"):
+                return first_executable(parts[index + 1] if index + 1 < len(parts) else "")
+            if part in ("-u", "-C", "--unset", "--chdir"):
+                index += 2
+                continue
+            if part.startswith("-"):
+                index += 1
+                continue
+            if "=" in part:
+                index += 1
+                continue
+            break
+    while index < len(parts) and "=" in parts[index] and not parts[index].startswith("-"):
+        index += 1
+    if parts[index:index + 1] == ["command"]:
+        index += 1
+    executable = parts[index] if index < len(parts) else ""
+    return executable.replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def already_owned(command):
+    executable = first_executable(command)
+    return executable in ("tss", "rtk", "tss-wrapper.sh")
+
+
 try:
     payload = json.load(sys.stdin)
 except Exception:
@@ -35,8 +74,7 @@ if not isinstance(command, str) or not command.strip():
 
 trimmed = command.strip()
 if (
-    trimmed.startswith("tss ")
-    or trimmed.startswith("command tss ")
+    already_owned(trimmed)
     or trimmed.startswith("env TSS_AGENT=")
     or trimmed.startswith("TSS_AGENT=")
     or trimmed.startswith("TSS_BYPASS=1")

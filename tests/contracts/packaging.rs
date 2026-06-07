@@ -22,7 +22,12 @@ fn npm_package_exposes_tss_binary_without_reimplementing_the_cli() {
     assert!(postinstall.contains("trustedHosts"));
     assert!(postinstall.contains("COPYFILE_EXCL"));
     assert!(postinstall.contains("objects.githubusercontent.com"));
-    assert!(file("npm/checksums.json").contains("tss-0.1.01-darwin-arm64"));
+    assert!(postinstall.contains("TSS_PLATFORM"));
+    assert!(postinstall.contains("TSS_ARCH"));
+    assert!(file("npm/checksums.json").contains("tss-0.1.02-darwin-arm64"));
+
+    let workflow = file(".github/workflows/npm-publish.yml");
+    assert!(workflow.contains("TSS_PLATFORM=darwin TSS_ARCH=arm64 node npm/postinstall.js"));
 }
 
 #[test]

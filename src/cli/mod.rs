@@ -10,10 +10,10 @@ use crate::analytics::{
 use crate::core::raw_store::{RawOutput as StoredRawOutput, RawRenderMode, RawStore};
 use crate::core::{CommandSpec, PassthroughRunner, RunnerError};
 use crate::filters::{filter_command, CommandInput};
-use crate::integrations::{all_integrations, Agent, AgentIntegration, Scope};
+use crate::integrations::{all_integrations, doctor_integrations, Agent, AgentIntegration, Scope};
 use crate::privacy::PrivacyConfig;
 
-const DISPLAY_VERSION: &str = "0.1.01";
+const DISPLAY_VERSION: &str = "0.1.02";
 
 const HELP: &str = "\
 tss - trust-first token saving CLI
@@ -363,6 +363,7 @@ fn home_dir() -> Option<PathBuf> {
 fn doctor() -> i32 {
     let counts = crate::analytics::command_coverage_counts();
     let issue_counts = crate::analytics::issue_class_coverage_counts();
+    let integrations = all_integrations();
 
     println!("tss doctor: ok");
     println!(
@@ -378,7 +379,51 @@ fn doctor() -> i32 {
     );
     println!("raw store: local");
     println!("analytics: local, command args redacted");
+    println!(
+        "RTK conflict check: use one active command-rewriting hook per agent; TSS skips RTK-owned commands and reports inactive when RTK owns the live hook."
+    );
+    let mut scoped_conflicts = Vec::new();
+    if let Ok(current_dir) = env::current_dir() {
+        scoped_conflicts.extend(rtk_conflicts_for_scope(
+            "Project",
+            &Scope::project(current_dir),
+            &integrations,
+        ));
+    }
+    if let Some(home) = home_dir() {
+        scoped_conflicts.extend(rtk_conflicts_for_scope(
+            "User",
+            &Scope::user(home),
+            &integrations,
+        ));
+    }
+    if scoped_conflicts.is_empty() {
+        println!("RTK conflicts: none detected");
+    } else {
+        println!("RTK conflicts:");
+        for (scope, agent, note) in scoped_conflicts {
+            println!("- {scope} {agent}: {note}");
+        }
+    }
     0
+}
+
+fn rtk_conflicts_for_scope(
+    scope_label: &'static str,
+    scope: &Scope,
+    integrations: &[Box<dyn AgentIntegration>],
+) -> Vec<(&'static str, &'static str, String)> {
+    doctor_integrations(scope, integrations)
+        .entries
+        .into_iter()
+        .flat_map(|entry| {
+            entry
+                .notes
+                .into_iter()
+                .filter(|note| note.contains("RTK"))
+                .map(move |note| (scope_label, entry.agent.display_name(), note))
+        })
+        .collect()
 }
 
 fn compat() -> i32 {

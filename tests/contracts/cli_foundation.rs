@@ -165,6 +165,7 @@ fn foundation_skeleton_commands_are_recognized() {
     assert!(doctor_stdout.contains("tss doctor: ok"));
     assert!(doctor_stdout.contains("commands: optimized="));
     assert!(doctor_stdout.contains("issue classes:"));
+    assert!(doctor_stdout.contains("RTK conflict check:"));
 
     let output = tss_command(&state_dir)
         .args(["raw", "tssr_missing"])
@@ -179,6 +180,65 @@ fn foundation_skeleton_commands_are_recognized() {
 }
 
 #[test]
+fn doctor_reports_rtk_hook_conflicts_from_user_scope() {
+    let state_dir = temp_state_dir("doctor-rtk-conflict-state");
+    let home_dir = temp_state_dir("doctor-rtk-conflict-home");
+    std::fs::create_dir_all(home_dir.join(".claude/hooks")).unwrap();
+    std::fs::write(
+        home_dir.join(".claude/hooks/tss-pre-tool-use.py"),
+        "#!/usr/bin/env python3\n",
+    )
+    .unwrap();
+    std::fs::write(
+        home_dir.join(".claude/settings.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"rtk hook claude"}]}]}}"#,
+    )
+    .unwrap();
+
+    let output = tss_command(&state_dir)
+        .env("HOME", &home_dir)
+        .arg("doctor")
+        .output()
+        .expect("run tss doctor");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("RTK conflicts:"));
+    assert!(stdout.contains("Claude Code"));
+    assert!(stdout.contains("RTK conflict detected"));
+}
+
+#[test]
+fn doctor_reports_rtk_hook_conflicts_from_project_scope() {
+    let state_dir = temp_state_dir("doctor-project-rtk-conflict-state");
+    let home_dir = temp_state_dir("doctor-project-rtk-conflict-home");
+    let project_dir = temp_state_dir("doctor-project-rtk-conflict-project");
+    std::fs::create_dir_all(project_dir.join(".codex/hooks")).unwrap();
+    std::fs::create_dir_all(&home_dir).unwrap();
+    std::fs::write(
+        project_dir.join(".codex/hooks/tss-pre-tool-use.py"),
+        "#!/usr/bin/env python3\n",
+    )
+    .unwrap();
+    std::fs::write(
+        project_dir.join(".codex/hooks.json"),
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"rtk hook codex"}]}]}}"#,
+    )
+    .unwrap();
+
+    let output = tss_command(&state_dir)
+        .env("HOME", &home_dir)
+        .current_dir(&project_dir)
+        .arg("doctor")
+        .output()
+        .expect("run tss doctor");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("RTK conflicts:"));
+    assert!(stdout.contains("Project Codex"));
+    assert!(stdout.contains("RTK conflict detected"));
+}
+
+#[test]
 fn version_reports_release_version() {
     let state_dir = temp_state_dir("version");
     let output = tss_command(&state_dir)
@@ -187,7 +247,7 @@ fn version_reports_release_version() {
         .expect("run version");
 
     assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "tss 0.1.01\n");
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "tss 0.1.02\n");
 }
 
 #[test]
