@@ -28,6 +28,7 @@ jobs:
           node --check npm/postinstall.js
           npm ci --ignore-scripts
           npm pack --dry-run --ignore-scripts
+          TSS_PLATFORM=darwin TSS_ARCH=arm64 node npm/postinstall.js
 
       - name: Publish to npm
         env:

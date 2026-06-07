@@ -12,6 +12,8 @@ jobs:
   publish:
     if: startsWith(github.ref_name, 'v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -27,11 +29,13 @@ jobs:
           cargo publish --dry-run
 
       - name: Check crates.io token
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: test -n "$CARGO_REGISTRY_TOKEN"
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "CARGO_REGISTRY_TOKEN is not configured; skipping crates.io publish."
+          else
+            echo "CARGO_REGISTRY_TOKEN is configured; crates.io publish will run."
+          fi
 
       - name: Publish to crates.io
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        if: env.CARGO_REGISTRY_TOKEN != ''
         run: cargo publish --token "$CARGO_REGISTRY_TOKEN"

@@ -1,6 +1,7 @@
 use super::installer::{
-    file_contains, file_exists, remove_file, rendered_file, version_check, write_file, Agent,
-    AgentIntegration, Detection, InstallPlan, MutationMode, Scope, UninstallPlan, Verification,
+    file_contains, file_contains_any, file_exists, remove_file, rendered_file, version_check,
+    write_file, Agent, AgentIntegration, Detection, InstallPlan, MutationMode, Scope,
+    UninstallPlan, Verification,
 };
 
 const HOOK: &str = include_str!("../../assets/hooks/claude/tss-pre-tool-use.py");
@@ -16,17 +17,28 @@ impl AgentIntegration for ClaudeIntegration {
 
     fn detect(&self, scope: &Scope) -> Detection {
         let installed = file_exists(scope, ".claude/hooks/tss-pre-tool-use.py");
+        let rtk_conflict = file_contains_any(
+            scope,
+            ".claude/settings.json",
+            &["rtk hook", " rtk ", "/rtk", "\"rtk"],
+        );
         let active = installed
             && file_contains(scope, ".claude/settings.json", "tss-pre-tool-use.py")
             && file_contains(scope, ".claude/settings.json", "PreToolUse");
+        let mut notes = vec![String::from(
+            "Run `claude --version` during install and verify active Claude settings include the TSS PreToolUse hook.",
+        )];
+        if rtk_conflict {
+            notes.push(String::from(
+                "RTK conflict detected: Claude settings reference RTK; use one active Bash command-rewriting hook per host.",
+            ));
+        }
         Detection {
             agent: Agent::Claude,
             installed,
             active,
             version: None,
-            notes: vec![String::from(
-                "Run `claude --version` during install and verify active Claude settings include the TSS PreToolUse hook.",
-            )],
+            notes,
         }
     }
 
@@ -57,9 +69,7 @@ impl AgentIntegration for ClaudeIntegration {
                 String::from("TSS never grants command permission; Claude approval rules stay in control"),
                 String::from("Claude deny/ask rules still take precedence over hook output"),
             ],
-            warnings: vec![String::from(
-                "Merge .claude/settings.tss.json into the active settings file after review.",
-            )],
+            warnings: claude_warnings(scope),
             restart_required: false,
             docs_url: Some(String::from(DOCS_URL)),
         }
@@ -94,4 +104,20 @@ impl AgentIntegration for ClaudeIntegration {
             ],
         }
     }
+}
+
+fn claude_warnings(scope: &Scope) -> Vec<String> {
+    let mut warnings = vec![String::from(
+        "Merge .claude/settings.tss.json into the active settings file after review.",
+    )];
+    if file_contains_any(
+        scope,
+        ".claude/settings.json",
+        &["rtk hook", " rtk ", "/rtk", "\"rtk"],
+    ) {
+        warnings.push(String::from(
+            "RTK hook reference detected. Keep TSS in coexist mode or remove the RTK hook before TSS owns Claude Bash rewriting.",
+        ));
+    }
+    warnings
 }

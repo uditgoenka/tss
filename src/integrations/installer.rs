@@ -313,3 +313,9 @@ pub fn file_contains(scope: &Scope, relative: &str, needle: &str) -> bool {
         .map(|contents| contents.contains(needle))
         .unwrap_or(false)
 }
+
+pub fn file_contains_any(scope: &Scope, relative: &str, needles: &[&str]) -> bool {
+    std::fs::read_to_string(scope.root.join(relative))
+        .map(|contents| needles.iter().any(|needle| contents.contains(needle)))
+        .unwrap_or(false)
+}

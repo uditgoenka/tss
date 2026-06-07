@@ -1,14 +1,14 @@
 ---
 title: "TSS Command Compatibility"
-version: "0.1.01"
+version: "0.1.02"
 status: "draft"
 last_updated: 2026-06-05
 license: "Apache-2.0"
 ---
 
-# TSS Command Compatibility v0.1.01
+# TSS Command Compatibility v0.1.02
 
-TSS v0.1.01 should feel familiar to users without inheriting the legacy tool's trust
+TSS v0.1.02 should feel familiar to users without inheriting the legacy tool's trust
 risks. The command vocabulary is intentionally broad, but optimization claims are
 intentionally narrow. Unknown, risky, structured, destructive, or unimplemented
 command shapes must run as passthrough unless an adapter has trust-contract test
@@ -34,7 +34,7 @@ tss run -- npm test
 tss run -- cargo test
 ```
 
-For the prior token-saving tool familiarity, v0.1.01 should also accept direct prefix aliases:
+For the prior token-saving tool familiarity, v0.1.02 should also accept direct prefix aliases:
 
 ```bash
 tss git status --short
@@ -49,14 +49,14 @@ It must not shadow TSS meta commands.
 
 ## the prior token-saving tool Meta Command Mapping
 
-| the prior token-saving tool Command | TSS v0.1.01 Command | Status | Notes |
+| the prior token-saving tool Command | TSS v0.1.02 Command | Status | Notes |
 |-------------|--------------------|--------|-------|
 | `legacy-cli <cmd> [args...]` | `tss <cmd> [args...]` | implemented | Direct prefix alias for `tss run -- <cmd> [args...]`. |
 | `legacy-cli proxy <cmd>` | `tss proxy <cmd>` | implemented | Passthrough-only alias. Must not filter lossy summaries. |
 | `legacy-cli gain` | `tss gain` | implemented | Shows local savings ledger summary, or a clear empty state. |
 | `legacy-cli gain --history` | `tss gain --history` | planned | Shows recent local ledger rows with redacted command args. |
 | `legacy-cli --version` | `tss --version` | implemented | Reports TSS version. |
-| command matrix | `tss compat` | implemented | Prints the v0.1.01 the prior token-saving tool migration matrix. |
+| command matrix | `tss compat` | implemented | Prints the v0.1.02 the prior token-saving tool migration matrix. |
 | `which legacy-cli` | `which tss` | passthrough-compatible | Shell-level check, not a TSS command. |
 
 `tss proxy <cmd>` exists for muscle memory. It should be equivalent to a
@@ -72,13 +72,13 @@ escape hatch for exact raw command behavior.
 |--------|---------|------------------|
 | optimized | TSS has an enabled adapter with fixture and contract coverage for this command shape. | May emit lossless or lossy summaries. Lossy output requires omission markers and raw recovery. |
 | passthrough-compatible | TSS recognizes the command as safe to run through the wrapper, but no filter is enabled for this shape. | Executes raw command and emits raw output unchanged. |
-| planned | TSS recognizes the command family as a parity target, but v0.1.01 does not yet optimize it. | Executes raw command and reports planned passthrough. |
+| planned | TSS recognizes the command family as a parity target, but v0.1.02 does not yet optimize it. | Executes raw command and reports planned passthrough. |
 | blocked | TSS refuses to filter, or optionally refuses to run, because the shape violates the trust contract. | Passes through for unsafe-to-filter shapes; denies only when an explicit guard blocks execution. |
 
 Passthrough is a successful compatibility result. It means the wrapper preserved
 truth over savings.
 
-## Optimized v0.1.01 Targets
+## Optimized v0.1.02 Targets
 
 These command shapes may be optimized only when their adapter is enabled and
 their tests pass.
@@ -102,10 +102,10 @@ mode, TSS must pass it through unchanged.
 ## Package Manager Compatibility
 
 Package managers should be easy to remember from the prior token-saving tool usage. Most package-manager
-commands are passthrough-compatible in v0.1.01 because package scripts can execute
+commands are passthrough-compatible in v0.1.02 because package scripts can execute
 arbitrary tools and workspace routing must not be rewritten.
 
-| Command Family | Examples | Status | v0.1.01 Rule |
+| Command Family | Examples | Status | v0.1.02 Rule |
 |----------------|----------|--------|-------------|
 | npm | `npm test`, `npm run build`, `npm exec`, `npx vitest` | passthrough-compatible | Preserve package script banner, workspace flags, subprocess output, and exit code. |
 | pnpm | `pnpm test`, `pnpm --filter web build`, `pnpm dlx` | passthrough-compatible | Do not rewrite filter/workspace selection. |
@@ -116,7 +116,7 @@ arbitrary tools and workspace routing must not be rewritten.
 | Homebrew | `brew install`, `brew upgrade`, `brew doctor`, `brew bundle` | passthrough-compatible | Pass through by default; do not summarize install/upgrade failures without fixtures. |
 
 `brew` is included for familiar vocabulary, not because TSS should optimize
-installer output in v0.1.01. Homebrew commands can be long-running, networked, and
+installer output in v0.1.02. Homebrew commands can be long-running, networked, and
 system-mutating, so filtering must wait for dedicated fixtures.
 
 ## Cloud, Container, And Dev Tool Compatibility
@@ -174,7 +174,7 @@ Suggested output shape:
 ```text
 tss doctor
 
-version: 0.1.01
+version: 0.1.02
 trust: ok
 raw store: enabled, retention 30d, permissions ok
 analytics: local, command args redacted
@@ -216,7 +216,7 @@ The JSON format should include at least:
 
 ```json
 {
-  "version": "0.1.01",
+  "version": "0.1.02",
   "trust": "ok",
   "raw_store": {
     "enabled": true,
@@ -234,7 +234,7 @@ The JSON format should include at least:
       "pattern": "docker build",
       "status": "planned",
       "adapter": null,
-      "reason": "recognized parity target, passthrough in v0.1.01"
+      "reason": "recognized parity target, passthrough in v0.1.02"
     }
   ],
   "blocked_shapes": [

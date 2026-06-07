@@ -1,9 +1,10 @@
-# TSS v0.1.01 Evals
+# TSS v0.1.02 Evals
 
-Tested on June 5, 2026. Hook-routing regression re-tested on June 7, 2026.
+Baseline command-output evals tested on June 5, 2026. Hook-routing and
+RTK-coexistence regressions re-tested on June 7, 2026 for v0.1.02.
 
-These evals are local regression checks for TSS v0.1.01. They are not billing
-claims. Token counts are estimated with the project estimator
+These evals are local regression checks for TSS. They are not billing claims.
+Token counts are estimated with the project estimator
 (`ceil(bytes / 4)`), and actual provider billing can differ by tokenizer,
 cache behavior, agent context policy, and model.
 
@@ -15,10 +16,11 @@ cache behavior, agent context policy, and model.
 | Large synthetic output | 50 | 50/50 passed | 139.7K estimated tokens saved, 100.0% rounded on final iteration | high-savings behavior on deterministic long terminal output with raw recovery |
 | Agent/sub-agent gain regression | 50 | 50/50 passed | 10 estimated tokens saved, 6.7% on final iteration | `TSS_AGENT`, `TSS_SUBAGENT`, shell-wrapped inner-command filtering, `By Agent`, `Sub-Agent Usage`, `Top Sub-Agents` |
 | Live Claude/Codex hook routing regression | 1 live-machine pass + contract tests | passed | new agent rows recorded in local ledger | active settings reference TSS hooks, hook JSON rewrites shell command fields, stale manual rows are not re-attributed |
+| RTK coexistence regression | contract tests | passed | no extra savings claimed for RTK-owned commands | TSS hooks skip `rtk`, path-based `rtk`, `env -i rtk`, and `tss-wrapper.sh` commands to avoid double-wrapping |
 
 ## What These Evals Prove
 
-TSS v0.1.01 is evaluated against a trust-first contract:
+TSS v0.1.02 is evaluated against a trust-first contract:
 
 1. Filtered output must keep enough actionable context to continue the task.
 2. Lossy summaries must include a raw recovery handle.
@@ -37,7 +39,7 @@ TSS v0.1.01 is evaluated against a trust-first contract:
 |-------|-------|
 | Date tested | June 5, 2026 |
 | Repository | `uditgoenka/tss` |
-| Version under test | `0.1.01` |
+| Version under test | `0.1.02` for hook/coexistence regressions; `0.1.01` baseline for the June 5 150-iteration command-output loops |
 | Binary source | local Rust source tree, built with Cargo |
 | Operating system | macOS on Apple Silicon in the maintainer workspace |
 | Analytics scope | temporary `TSS_HOME`, `TSS_ANALYTICS_FILE`, and `TSS_RAW_DIR` per iteration |
@@ -76,6 +78,7 @@ Checks performed:
 - Executed rewritten Claude and Codex commands against the real local ledger.
 - Executed a named sub-agent command with
   `TSS_AGENT=codex TSS_SUBAGENT=1 TSS_SUBAGENT_NAME=verifier`.
+- Re-tested v0.1.02 RTK coexistence guards through contract tests.
 
 Live dashboard proof after the regression commands:
 
@@ -110,6 +113,26 @@ Interpretation:
 - `TSS_SUBAGENT=1` increments the `Sub` column and the `Sub-Agent Usage`
   section.
 - `TSS_SUBAGENT_NAME=<name>` controls the name in `Top Sub-Agents`.
+
+## RTK Coexistence Regression
+
+Date tested: June 7, 2026.
+
+This regression protects mixed-install machines where both TSS and RTK are
+available. TSS uses a single-owner rule: one active command-rewriting hook should
+own a command. When a command is already RTK-owned, TSS hook assets leave it
+unchanged instead of wrapping it inside another TSS invocation.
+
+Checks performed through public hook payloads:
+
+- Claude hook leaves `env RTK_DEBUG=1 rtk git status` unchanged.
+- Claude hook leaves `/opt/homebrew/bin/rtk gain` unchanged.
+- Codex hook leaves `command rtk git diff` unchanged.
+- Codex hook leaves `env -i RTK_SCOPE=global rtk gain` unchanged.
+- Codex hook leaves `./.codex/tss-wrapper.sh git status` unchanged.
+- Copilot hook returns no mutation for `RTK_SCOPE=global rtk gain`.
+- `tss doctor` prints RTK conflict status and per-agent conflict notes when
+  active host settings reference RTK.
 
 ## Mixed Fixture Regression
 
@@ -228,7 +251,7 @@ Checks performed on every iteration:
 
 ## Agent/Sub-Agent Gain Regression
 
-This eval is the v0.1.01 proof for the sub-agent leakage class reported in
+This eval is the v0.1.01 baseline proof for the sub-agent leakage class reported in
 multi-agent workflows. It verifies that TSS can measure and show child-agent
 usage when a sub-agent actually invokes TSS.
 
@@ -324,7 +347,7 @@ commands, TSS cannot measure or save those tokens.
 
 ## Reproduction Commands
 
-The dated proof run used the built release binary from the current v0.1.01
+The dated baseline proof run used the built release binary from the v0.1.01
 source tree. The commands below use `cargo run --quiet --` as a source-tree
 reproduction path; replacing it with an installed `tss` binary should produce
 the same command-output behavior.
@@ -380,7 +403,7 @@ requires knowing when not to filter.
 | Case | Expected behavior |
 |------|-------------------|
 | `tss proxy printf 'hello\n'` | exact passthrough and analytics fallback count |
-| `git diff` and `git show` patch output | raw passthrough in v0.1.01 |
+| `git diff` and `git show` patch output | raw passthrough in v0.1.02 |
 | package managers such as `npm`, `pnpm`, `brew`, `pip` | recognized but raw until fixture-backed |
 | structured or exact output flags | pass through unless a parser-backed adapter exists |
 | missing host hook inheritance in child agents | not assumed; use `tss shell-init --subagent` or explicit env prefix |
@@ -391,7 +414,7 @@ requires knowing when not to filter.
 - These are not claims that every supported agent host automatically mutates
   every terminal command.
 - These are not claims that cloud, container, process-table, ESLint, or patch
-  reducers are implemented in v0.1.01.
+  reducers are implemented in v0.1.02.
 - These are not remote telemetry. All eval analytics are local JSONL files in
   temporary state directories.
 
